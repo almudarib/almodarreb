@@ -397,3 +397,195 @@ export async function listUsersByKind(
     };
   }
 }
+
+export type UserDetails =
+  | {
+      kind: 'admin' | 'teacher';
+      id: number;
+      name: string;
+      auth_user_id: string;
+    }
+  | {
+      kind: 'student';
+      id: number;
+      name: string;
+      auth_user_id: string;
+      national_id: string;
+      language: string;
+      exam_datetime: string | null;
+      start_date: string | null;
+      notes: string | null;
+      show_exams: boolean;
+      teacher_id: number;
+    };
+
+export async function getUserDetails(
+  kind: UserKind,
+  id: number,
+): Promise<{ ok: true; user: UserDetails } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    if (kind === 'student') {
+      const { data, error } = await supabase
+        .from('students')
+        .select(
+          'id,name,auth_user_id,national_id,language,exam_datetime,start_date,notes,show_exams,teacher_id',
+        )
+        .eq('id', id)
+        .maybeSingle();
+      if (error) {
+        return { ok: false, error: error.message, details: error };
+      }
+      if (!data) {
+        return { ok: false, error: 'Student not found' };
+      }
+      return {
+        ok: true,
+        user: {
+          kind: 'student',
+          id: data.id as number,
+          name: data.name as string,
+          auth_user_id: data.auth_user_id as string,
+          national_id: data.national_id as string,
+          language: data.language as string,
+          exam_datetime: (data.exam_datetime as string | null) ?? null,
+          start_date: (data.start_date as string | null) ?? null,
+          notes: (data.notes as string | null) ?? null,
+          show_exams: (data.show_exams as boolean) ?? true,
+          teacher_id: data.teacher_id as number,
+        },
+      };
+    }
+    const { data, error } = await supabase
+      .from('users')
+      .select('id,name,auth_user_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    if (!data) {
+      return { ok: false, error: 'User not found' };
+    }
+    return {
+      ok: true,
+      user: {
+        kind,
+        id: data.id as number,
+        name: data.name as string,
+        auth_user_id: data.auth_user_id as string,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error,
+    };
+  }
+}
+
+type UpdateStudentInput = {
+  kind: 'student';
+  id: number;
+  name?: string;
+  nationalId?: string;
+  language?: string;
+  examDatetime?: string | null;
+  startDate?: string | null;
+  notes?: string | null;
+  showExams?: boolean;
+  teacherId?: number;
+};
+
+type UpdateUserInput = {
+  kind: 'admin' | 'teacher';
+  id: number;
+  name?: string;
+};
+
+export async function updateUser(
+  input: UpdateStudentInput | UpdateUserInput,
+): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    if (input.kind === 'student') {
+      const payload: Record<string, unknown> = {};
+      if (input.name !== undefined) payload.name = input.name;
+      if (input.nationalId !== undefined) payload.national_id = input.nationalId;
+      if (input.language !== undefined) payload.language = input.language;
+      if (input.examDatetime !== undefined) payload.exam_datetime = input.examDatetime;
+      if (input.startDate !== undefined) payload.start_date = input.startDate;
+      if (input.notes !== undefined) payload.notes = input.notes;
+      if (input.showExams !== undefined) payload.show_exams = input.showExams;
+      if (input.teacherId !== undefined) payload.teacher_id = input.teacherId;
+      const { error } = await supabase.from('students').update(payload).eq('id', input.id);
+      if (error) {
+        return { ok: false, error: error.message, details: error };
+      }
+      return { ok: true };
+    }
+    const payload: Record<string, unknown> = {};
+    if (input.name !== undefined) payload.name = input.name;
+    const { error } = await supabase.from('users').update(payload).eq('id', input.id);
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error,
+    };
+  }
+}
+
+export async function deleteUserByKind(
+  kind: UserKind,
+  id: number,
+): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    if (kind === 'student') {
+      const { data: s, error: selError } = await supabase
+        .from('students')
+        .select('auth_user_id')
+        .eq('id', id)
+        .maybeSingle();
+      if (selError) {
+        return { ok: false, error: selError.message, details: selError };
+      }
+      if (!s?.auth_user_id) {
+        return { ok: false, error: 'Student auth user not found' };
+      }
+      const { error: delAuthErr } = await supabase.auth.admin.deleteUser(s.auth_user_id as string);
+      if (delAuthErr) {
+        return { ok: false, error: delAuthErr.message, details: delAuthErr };
+      }
+      return { ok: true };
+    }
+    const { data: u, error: selError } = await supabase
+      .from('users')
+      .select('auth_user_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (selError) {
+      return { ok: false, error: selError.message, details: selError };
+    }
+    if (!u?.auth_user_id) {
+      return { ok: false, error: 'User auth user not found' };
+    }
+    const { error: delAuthErr } = await supabase.auth.admin.deleteUser(u.auth_user_id as string);
+    if (delAuthErr) {
+      return { ok: false, error: delAuthErr.message, details: delAuthErr };
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error,
+    };
+  }
+}
