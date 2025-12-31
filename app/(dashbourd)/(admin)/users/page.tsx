@@ -2,69 +2,44 @@
 
 import * as React from 'react';
 import { Alert, Box, Container, FormControl, FormHelperText, IconButton, MenuItem, Select, Snackbar, Stack, Typography, Paper, Chip } from '@mui/material';
-import { Input, Label, Card, CardHeader, CardContent, CardActions, Button, Checkbox, Dialog, Modal, Form, Menu, Table } from '@/components/ui';
+import { Input, Label, Card, CardHeader, CardContent, CardActions, Button, Dialog, Modal, Form, Menu, Table } from '@/components/ui';
 import { MoreVert } from '@mui/icons-material';
 import {
   createUser,
-  listAllUsersWithKind,
+  listAllUsersSummary,
   listUsersByKind,
   getUserDetails,
   updateUser,
   deleteUserByKind,
   type CreateUserInput,
   type UserDetails,
+  type UserSummary,
 } from '@/app/actions/users';
 
 // نوع الدور المستخدم في الواجهة
-type UserKind = 'admin' | 'teacher' | 'student';
+type UserKind = 'admin' | 'teacher';
 
 // عنصر واجهة لإضافة مستخدم جديد (طالب/مسؤول/معلم)
 function AddUserForm({
   onCreated,
+  formId,
 }: {
   onCreated: () => void;
+  formId?: string;
 }) {
   // حالة الحقول
   const [kind, setKind] = React.useState<UserKind | ''>('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [name, setName] = React.useState('');
-  const [nationalId, setNationalId] = React.useState('');
-  const [language, setLanguage] = React.useState<'ar' | 'en' | ''>('');
-  const [teacherId, setTeacherId] = React.useState<number | ''>('');
-  const [showExams, setShowExams] = React.useState(true);
-  const [examDatetime, setExamDatetime] = React.useState<string>('');
-  const [startDate, setStartDate] = React.useState<string>('');
-  const [notes, setNotes] = React.useState('');
-
-  // حالة المعلمين المحمّلة من النظام
-  const [teachers, setTeachers] = React.useState<Array<{ id: number; name: string }>>([]);
-  const [loadingTeachers, setLoadingTeachers] = React.useState(false);
+  // لا توجد حقول خاصة بالطلاب بعد الإزالة
 
   // حالة الواجهة العامة
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [successOpen, setSuccessOpen] = React.useState(false);
 
-  // تحميل قائمة المعلمين
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoadingTeachers(true);
-      const res = await listUsersByKind('teacher');
-      if (mounted) {
-        if (res.ok) {
-          setTeachers(res.users.map((u) => ({ id: u.id, name: u.name })));
-        } else {
-          setError(res.error);
-        }
-        setLoadingTeachers(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // إزالة تحميل بيانات المعلمين الخاصة بإسناد الطالب
 
   // تحقق أساسي من صحة الإدخال قبل الإرسال
   function validate(): Record<string, string> {
@@ -81,17 +56,7 @@ function AddUserForm({
     if (!name.trim()) {
       errs.name = 'الاسم مطلوب';
     }
-    if (kind === 'student') {
-      if (!nationalId.trim() || !/^\d{6,20}$/.test(nationalId)) {
-        errs.nationalId = 'الرقم القومي يجب أن يكون أرقامًا بين 6 و20';
-      }
-      if (!language) {
-        errs.language = 'اللغة مطلوبة';
-      }
-      if (!teacherId) {
-        errs.teacherId = 'يجب اختيار المدرّس';
-      }
-    }
+    // لا يوجد تحقق خاص بالطالب
     return errs;
   }
 
@@ -108,21 +73,7 @@ function AddUserForm({
     }
     setSubmitting(true);
     let input: CreateUserInput;
-    if (kind === 'student') {
-      input = {
-        kind: 'student',
-        email,
-        password,
-        name,
-        nationalId,
-        language,
-        teacherId: teacherId as number,
-        showExams,
-        examDatetime: examDatetime ? examDatetime : null,
-        startDate: startDate ? startDate : null,
-        notes: notes ? notes : null,
-      };
-    } else if (kind === 'admin') {
+    if (kind === 'admin') {
       input = {
         kind: 'admin',
         email,
@@ -148,13 +99,7 @@ function AddUserForm({
     setEmail('');
     setPassword('');
     setName('');
-    setNationalId('');
-    setLanguage('');
-    setTeacherId('');
-    setShowExams(true);
-    setExamDatetime('');
-    setStartDate('');
-    setNotes('');
+    // إزالة إعادة تعيين الحقول الخاصة بالطالب
     setSuccessOpen(true);
     onCreated();
   }
@@ -168,7 +113,7 @@ function AddUserForm({
           {error}
         </Alert>
       )}
-      <Form onSubmit={handleSubmit}>
+      <Form id={formId} onSubmit={handleSubmit}>
         <Box
           sx={{
             display: 'grid',
@@ -186,7 +131,7 @@ function AddUserForm({
                 onChange={(e) => setKind(e.target.value as UserKind)}
                 required
               >
-                <MenuItem value="student">طالب</MenuItem>
+                {/* تمت إزالة خيار الطالب */}
                 <MenuItem value="teacher">معلّم</MenuItem>
                 <MenuItem value="admin">مسؤول</MenuItem>
               </Select>
@@ -227,110 +172,7 @@ function AddUserForm({
               helperText={fieldErrors.name}
             />
           </Box>
-          {kind === 'student' && (
-            <Box>
-              <Input
-                label="الرقم القومي"
-                value={nationalId}
-                onChange={(e) => setNationalId(e.target.value)}
-                required
-                fullWidth
-                error={!!fieldErrors.nationalId}
-                helperText={fieldErrors.nationalId}
-                inputProps={{ inputMode: 'numeric' }}
-              />
-            </Box>
-          )}
-          {kind === 'student' && (
-            <Box>
-              <FormControl fullWidth error={!!fieldErrors.language}>
-                <Label id="language-label">اللغة</Label>
-                <Select
-                  labelId="language-label"
-                  label="اللغة"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as 'ar' | 'en' | '')}
-                  required
-                >
-                  <MenuItem value="ar">العربية</MenuItem>
-                  <MenuItem value="en">الإنجليزية</MenuItem>
-                </Select>
-                {fieldErrors.language && <FormHelperText>{fieldErrors.language}</FormHelperText>}
-              </FormControl>
-            </Box>
-          )}
-          {kind === 'student' && (
-            <Box>
-              <FormControl fullWidth error={!!fieldErrors.teacherId}>
-                <Label id="teacher-label">المعلّم</Label>
-                <Select
-                  labelId="teacher-label"
-                  label="المعلّم"
-                  value={teacherId}
-                  onChange={(e) => setTeacherId(Number(e.target.value))}
-                  required
-                >
-                  {loadingTeachers ? (
-                    <MenuItem value="">
-                      <em>جاري التحميل...</em>
-                    </MenuItem>
-                  ) : (
-                    teachers.map((t) => (
-                      <MenuItem key={t.id} value={t.id}>
-                        {t.name}
-                      </MenuItem>
-                    ))
-                  )}
-                </Select>
-                {fieldErrors.teacherId && <FormHelperText>{fieldErrors.teacherId}</FormHelperText>}
-              </FormControl>
-            </Box>
-          )}
-          {kind === 'student' && (
-            <Box>
-              <Input
-                label="موعد الامتحان"
-                type="datetime-local"
-                value={examDatetime}
-                onChange={(e) => setExamDatetime(e.target.value)}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-            </Box>
-          )}
-          {kind === 'student' && (
-            <Box>
-              <Input
-                label="تاريخ البدء"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-            </Box>
-          )}
-          {kind === 'student' && (
-            <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
-              <Input
-                label="ملاحظات"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                fullWidth
-                multiline
-                minRows={3}
-              />
-            </Box>
-          )}
-          {kind === 'student' && (
-            <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
-              <Checkbox
-                checked={showExams}
-                onChange={(e) => setShowExams(e.target.checked)}
-                label="السماح بعرض الامتحانات"
-              />
-            </Box>
-          )}
+          {/* تمت إزالة حقول الطالب بالكامل */}
           <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
             <Stack direction="row" spacing={2} justifyContent="flex-end">
               <Button type="submit" variant="contained" loading={submitting} loadingText="جاري الحفظ...">
@@ -355,7 +197,7 @@ function AddUserForm({
 // واجهة عرض/بحث/تصفية/ترتيب المستخدمين مع إجراءات CRUD
 function UsersTable() {
   // الحالة العامة
-  const [users, setUsers] = React.useState<Array<{ id: number; name: string; kind: UserKind }>>([]);
+  const [users, setUsers] = React.useState<Array<{ id: number; name: string; kind: UserKind; email: string; createdAt: string }>>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [roleFilter, setRoleFilter] = React.useState<UserKind | 'all'>('all');
@@ -378,13 +220,13 @@ function UsersTable() {
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await listAllUsersWithKind();
+    const res = await listAllUsersSummary();
     if (!res.ok) {
       setError(res.error);
       setLoading(false);
       return;
     }
-    setUsers(res.users);
+    setUsers(res.users as Array<UserSummary>);
     setLoading(false);
   }, []);
 
@@ -400,7 +242,7 @@ function UsersTable() {
     }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      data = data.filter((u) => u.name.toLowerCase().includes(q) || String(u.id).includes(q));
+      data = data.filter((u) => u.name.toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q));
     }
     data = [...data].sort((a, b) => {
       const cmp = a.name.localeCompare(b.name, 'ar');
@@ -470,33 +312,14 @@ function UsersTable() {
   // حفظ التعديلات
   async function handleSaveEdit() {
     if (!selectedDetails) return;
-    if (selectedDetails.kind === 'student') {
-      const res = await updateUser({
-        kind: 'student',
-        id: selectedDetails.id,
-        name: selectedDetails.name,
-        nationalId: selectedDetails.national_id,
-        language: selectedDetails.language,
-        examDatetime: selectedDetails.exam_datetime ?? null,
-        startDate: selectedDetails.start_date ?? null,
-        notes: selectedDetails.notes ?? null,
-        showExams: selectedDetails.show_exams,
-        teacherId: selectedDetails.teacher_id,
-      });
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
-    } else {
-      const res = await updateUser({
-        kind: selectedDetails.kind,
-        id: selectedDetails.id,
-        name: selectedDetails.name,
-      });
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
+    const res = await updateUser({
+      kind: selectedDetails.kind,
+      id: selectedDetails.id,
+      name: selectedDetails.name,
+    });
+    if (!res.ok) {
+      setError(res.error);
+      return;
     }
     setSnackbarMsg('تم حفظ التعديلات بنجاح');
     setEditOpen(false);
@@ -524,11 +347,7 @@ function UsersTable() {
             color={roleFilter === 'teacher' ? 'primary' : 'default'}
             onClick={() => setRoleFilter('teacher')}
           />
-          <Chip
-            label="طالب"
-            color={roleFilter === 'student' ? 'primary' : 'default'}
-            onClick={() => setRoleFilter('student')}
-          />
+          {/* تمت إزالة خيار طالب */}
         </Stack>
       </Stack>
 
@@ -549,24 +368,33 @@ function UsersTable() {
 
       <Table
         columns={[
-          { id: 'id', label: 'المعرّف' },
           {
             id: 'name',
             label: 'الاسم',
             sortable: true,
           },
           {
+            id: 'email',
+            label: 'البريد الإلكتروني',
+          },
+          {
             id: 'kind',
             label: 'الدور',
             render: (u: { id: number; name: string; kind: UserKind }) =>
-              u.kind === 'admin' ? 'مدير' : u.kind === 'teacher' ? 'معلّم' : 'طالب',
+              u.kind === 'admin' ? 'مدير' : 'معلّم',
+          },
+          {
+            id: 'createdAt',
+            label: 'تاريخ التسجيل',
+            render: (u: { createdAt?: string }) =>
+              u.createdAt ? new Date(u.createdAt).toLocaleString('ar-EG') : '-',
           },
           {
             id: 'actions',
             label: 'إجراءات',
             align: 'right',
             render: (u: { id: number; name: string; kind: UserKind }) => (
-              <IconButton onClick={(e) => openMenu(e as any, u)} aria-label="الإجراءات">
+              <IconButton onClick={(e) => openMenu(e, u)} aria-label="الإجراءات">
                 <MoreVert />
               </IconButton>
             ),
@@ -609,17 +437,7 @@ function UsersTable() {
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Input label="المعرّف" value={selectedDetails.id} InputProps={{ readOnly: true }} />
             <Input label="الاسم" value={selectedDetails.name} InputProps={{ readOnly: true }} />
-            {selectedDetails.kind === 'student' ? (
-              <>
-                <Input label="الرقم القومي" value={selectedDetails.national_id ?? ''} InputProps={{ readOnly: true }} />
-                <Input label="اللغة" value={selectedDetails.language ?? ''} InputProps={{ readOnly: true }} />
-                <Input label="موعد الامتحان" value={selectedDetails.exam_datetime ?? ''} InputProps={{ readOnly: true }} />
-                <Input label="تاريخ البدء" value={selectedDetails.start_date ?? ''} InputProps={{ readOnly: true }} />
-                <Input label="ملاحظات" value={selectedDetails.notes ?? ''} InputProps={{ readOnly: true }} />
-                <Input label="عرض الامتحانات" value={selectedDetails.show_exams ? 'نعم' : 'لا'} InputProps={{ readOnly: true }} />
-                <Input label="المعلّم" value={selectedDetails.teacher_id ?? ''} InputProps={{ readOnly: true }} />
-              </>
-            ) : null}
+            {/* تمت إزالة عرض تفاصيل الطالب */}
           </Stack>
         ) : (
           <Typography>لا توجد بيانات للعرض</Typography>
@@ -645,68 +463,7 @@ function UsersTable() {
               onChange={(e) => setSelectedDetails({ ...selectedDetails, name: e.target.value })}
               fullWidth
             />
-            {selectedDetails.kind === 'student' ? (
-              <>
-                <Input
-                  label="الرقم القومي"
-                  value={selectedDetails.national_id ?? ''}
-                  onChange={(e) => setSelectedDetails({ ...selectedDetails, national_id: e.target.value })}
-                  fullWidth
-                />
-                <FormControl fullWidth>
-                  <Label id="edit-language-label">اللغة</Label>
-                  <Select
-                    labelId="edit-language-label"
-                    label="اللغة"
-                    value={selectedDetails.language ?? ''}
-                    onChange={(e) => setSelectedDetails({ ...selectedDetails, language: e.target.value })}
-                  >
-                    <MenuItem value="ar">العربية</MenuItem>
-                    <MenuItem value="en">الإنجليزية</MenuItem>
-                  </Select>
-                </FormControl>
-                <Input
-                  label="موعد الامتحان"
-                  type="datetime-local"
-                  value={selectedDetails.exam_datetime ?? ''}
-                  onChange={(e) => setSelectedDetails({ ...selectedDetails, exam_datetime: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-                <Input
-                  label="تاريخ البدء"
-                  type="date"
-                  value={selectedDetails.start_date ?? ''}
-                  onChange={(e) => setSelectedDetails({ ...selectedDetails, start_date: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-                <Input
-                  label="ملاحظات"
-                  value={selectedDetails.notes ?? ''}
-                  onChange={(e) => setSelectedDetails({ ...selectedDetails, notes: e.target.value })}
-                  fullWidth
-                  multiline
-                  minRows={3}
-                />
-                <Checkbox
-                  checked={!!selectedDetails.show_exams}
-                  onChange={(e) => setSelectedDetails({ ...selectedDetails, show_exams: e.target.checked })}
-                  label="السماح بعرض الامتحانات"
-                />
-                <Input
-                  label="المعلّم (ID)"
-                  value={selectedDetails.teacher_id ?? ''}
-                  onChange={(e) =>
-                    setSelectedDetails({
-                      ...selectedDetails,
-                      teacher_id: Number(e.target.value) || selectedDetails.teacher_id,
-                    })
-                  }
-                  fullWidth
-                />
-              </>
-            ) : null}
+            {/* تمت إزالة حقول تعديل الطالب */}
           </Stack>
         ) : (
           <Typography>لا توجد بيانات للتعديل</Typography>
@@ -743,27 +500,44 @@ function UsersTable() {
 export default function AdminUsersPage() {
   // عند إنشاء طالب جديد، نقوم بتحديث الجدول عبر مفتاح إعادة التحميل
   const [reloadKey, setReloadKey] = React.useState(0);
+  const [addOpen, setAddOpen] = React.useState(false);
 
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3 }}>
-        إدارة المستخدمين وإضافة الطلاب
-      </Typography>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: '5fr 7fr' },
-          gap: 3,
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Typography variant="h5">المستخدمون</Typography>
+        <Button variant="contained" onClick={() => setAddOpen(true)}>
+          إضافة مستخدم جديد
+        </Button>
+      </Stack>
+      <UsersTable key={reloadKey} />
+      <Modal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        title="إضافة مستخدم جديد"
+        submitText="إضافة"
+        cancelText="إلغاء"
+        onSubmit={() => {
+          const form = document.getElementById('add-user-form') as HTMLFormElement | null;
+          if (form && typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else if (form) {
+            const evt = new Event('submit', { bubbles: true, cancelable: true });
+            form.dispatchEvent(evt);
+          }
         }}
+        onCancel={() => setAddOpen(false)}
+        fullWidth
+        maxWidth="md"
       >
-        <Box>
-          <AddUserForm onCreated={() => setReloadKey((k) => k + 1)} />
-        </Box>
-        <Box>
-          {/* إعادة تركيب UsersTable عند التحديث لضمان التحميل */}
-          <UsersTable key={reloadKey} />
-        </Box>
-      </Box>
+        <AddUserForm
+          formId="add-user-form"
+          onCreated={() => {
+            setAddOpen(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      </Modal>
     </Container>
   );
 }
