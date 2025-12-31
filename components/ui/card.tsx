@@ -1,38 +1,28 @@
-import React from "react";
-import { cn } from "@/lib/utils";
+'use client';
+import * as React from 'react';
+import {
+  Card as MUICard,
+  type CardProps as MUICardProps,
+  CardContent,
+  CardHeader,
+  CardActions,
+} from '@mui/material';
+import { Typography, type TypographyProps } from '@mui/material';
 
-export function Card({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  return <div className={cn("rounded-md border", className)} {...props} />;
+export type CardProps = MUICardProps;
+
+export function Card(props: CardProps) {
+  return <MUICard {...props} />;
 }
 
-export function CardHeader({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  return <div className={cn("p-6 border-b", className)} {...props} />;
+export { CardContent, CardHeader, CardActions };
+
+export function CardTitle(props: TypographyProps) {
+  return <Typography variant="h6" {...props} />;
 }
 
-export function CardTitle({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"h3">) {
-  return <h3 className={cn("text-xl font-semibold", className)} {...props} />;
+export function CardDescription(props: TypographyProps) {
+  return <Typography variant="body2" color="text.secondary" {...props} />;
 }
 
-export function CardDescription({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"p">) {
-  return <p className={cn("text-sm text-muted-foreground", className)} {...props} />;
-}
-
-export function CardContent({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  return <div className={cn("p-6", className)} {...props} />;
-}
-
+export default Card;

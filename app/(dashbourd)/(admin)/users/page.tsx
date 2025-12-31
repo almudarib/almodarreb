@@ -1,38 +1,8 @@
 'use client';
 
 import * as React from 'react';
- import {
-   Alert,
-   Box,
-   Button,
-   Checkbox,
-   Container,
-   Dialog,
-   DialogActions,
-   DialogContent,
-   DialogTitle,
-   FormControl,
-   FormControlLabel,
-  FormHelperText,
-  IconButton,
-  InputLabel,
-  Menu,
-  MenuItem,
-  Select,
-   Snackbar,
-   Stack,
-   Table,
-   TableBody,
-   TableCell,
-   TableContainer,
-   TableHead,
-   TableRow,
-   TableSortLabel,
-   TextField,
-   Typography,
-   Paper,
-   Chip,
- } from '@mui/material';
+import { Alert, Box, Container, FormControl, FormHelperText, IconButton, MenuItem, Select, Snackbar, Stack, Typography, Paper, Chip } from '@mui/material';
+import { Input, Label, Card, CardHeader, CardContent, CardActions, Button, Checkbox, Dialog, Modal, Form, Menu, Table } from '@/components/ui';
 import { MoreVert } from '@mui/icons-material';
 import {
   createUser,
@@ -190,16 +160,15 @@ function AddUserForm({
   }
 
   return (
-    <Paper elevation={1} sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ mb: 2 }}>
-        إضافة مستخدم جديد
-      </Typography>
+    <Card elevation={1}>
+      <CardHeader title="إضافة مستخدم جديد" />
+      <CardContent>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-      <Box component="form" onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit}>
         <Box
           sx={{
             display: 'grid',
@@ -209,7 +178,7 @@ function AddUserForm({
         >
           <Box>
             <FormControl fullWidth error={!!fieldErrors.kind}>
-              <InputLabel id="kind-label">نوع المستخدم</InputLabel>
+              <Label id="kind-label">نوع المستخدم</Label>
               <Select
                 labelId="kind-label"
                 label="نوع المستخدم"
@@ -225,7 +194,7 @@ function AddUserForm({
             </FormControl>
           </Box>
           <Box>
-            <TextField
+            <Input
               label="البريد الإلكتروني"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -236,7 +205,7 @@ function AddUserForm({
             />
           </Box>
           <Box>
-            <TextField
+            <Input
               label="كلمة المرور"
               type="password"
               value={password}
@@ -248,7 +217,7 @@ function AddUserForm({
             />
           </Box>
           <Box>
-            <TextField
+            <Input
               label="الاسم"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -260,7 +229,7 @@ function AddUserForm({
           </Box>
           {kind === 'student' && (
             <Box>
-              <TextField
+              <Input
                 label="الرقم القومي"
                 value={nationalId}
                 onChange={(e) => setNationalId(e.target.value)}
@@ -275,7 +244,7 @@ function AddUserForm({
           {kind === 'student' && (
             <Box>
               <FormControl fullWidth error={!!fieldErrors.language}>
-                <InputLabel id="language-label">اللغة</InputLabel>
+                <Label id="language-label">اللغة</Label>
                 <Select
                   labelId="language-label"
                   label="اللغة"
@@ -293,7 +262,7 @@ function AddUserForm({
           {kind === 'student' && (
             <Box>
               <FormControl fullWidth error={!!fieldErrors.teacherId}>
-                <InputLabel id="teacher-label">المعلّم</InputLabel>
+                <Label id="teacher-label">المعلّم</Label>
                 <Select
                   labelId="teacher-label"
                   label="المعلّم"
@@ -319,7 +288,7 @@ function AddUserForm({
           )}
           {kind === 'student' && (
             <Box>
-              <TextField
+              <Input
                 label="موعد الامتحان"
                 type="datetime-local"
                 value={examDatetime}
@@ -331,7 +300,7 @@ function AddUserForm({
           )}
           {kind === 'student' && (
             <Box>
-              <TextField
+              <Input
                 label="تاريخ البدء"
                 type="date"
                 value={startDate}
@@ -343,7 +312,7 @@ function AddUserForm({
           )}
           {kind === 'student' && (
             <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
-              <TextField
+              <Input
                 label="ملاحظات"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -355,30 +324,31 @@ function AddUserForm({
           )}
           {kind === 'student' && (
             <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
-              <FormControlLabel
-                control={
-                  <Checkbox checked={showExams} onChange={(e) => setShowExams(e.target.checked)} />
-                }
+              <Checkbox
+                checked={showExams}
+                onChange={(e) => setShowExams(e.target.checked)}
                 label="السماح بعرض الامتحانات"
               />
             </Box>
           )}
           <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
             <Stack direction="row" spacing={2} justifyContent="flex-end">
-              <Button type="submit" variant="contained" disabled={submitting}>
-                {submitting ? 'جاري الحفظ...' : 'حفظ'}
+              <Button type="submit" variant="contained" loading={submitting} loadingText="جاري الحفظ...">
+                حفظ
               </Button>
             </Stack>
           </Box>
         </Box>
-      </Box>
+      </Form>
       <Snackbar
         open={successOpen}
         autoHideDuration={4000}
         onClose={() => setSuccessOpen(false)}
         message="تم إنشاء المستخدم بنجاح"
       />
-    </Paper>
+      </CardContent>
+      <CardActions />
+    </Card>
   );
 }
 
@@ -390,7 +360,8 @@ function UsersTable() {
   const [error, setError] = React.useState<string | null>(null);
   const [roleFilter, setRoleFilter] = React.useState<UserKind | 'all'>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [sortAsc, setSortAsc] = React.useState(true);
+  const [sortBy, setSortBy] = React.useState<'name'>('name');
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
   // قائمة الإجراءات لكل صف
   const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
@@ -433,10 +404,10 @@ function UsersTable() {
     }
     data = [...data].sort((a, b) => {
       const cmp = a.name.localeCompare(b.name, 'ar');
-      return sortAsc ? cmp : -cmp;
+      return sortDirection === 'asc' ? cmp : -cmp;
     });
     return data;
-  }, [users, roleFilter, searchQuery, sortAsc]);
+  }, [users, roleFilter, searchQuery, sortDirection]);
 
   // فتح قائمة الإجراءات
   function openMenu(e: React.MouseEvent<HTMLButtonElement>, user: { id: number; name: string; kind: UserKind }) {
@@ -568,7 +539,7 @@ function UsersTable() {
       )}
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-        <TextField
+        <Input
           fullWidth
           placeholder="ابحث بالاسم أو المعرّف"
           value={searchQuery}
@@ -576,236 +547,186 @@ function UsersTable() {
         />
       </Stack>
 
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>المعرّف</TableCell>
-              <TableCell sortDirection={sortAsc ? 'asc' : 'desc'}>
-                <TableSortLabel
-                  active
-                  direction={sortAsc ? 'asc' : 'desc'}
-                  onClick={() => setSortAsc((v) => !v)}
-                >
-                  الاسم
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>الدور</TableCell>
-              <TableCell align="right">إجراءات</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4}>جاري التحميل...</TableCell>
-              </TableRow>
-            ) : visibleUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4}>لا توجد بيانات</TableCell>
-              </TableRow>
-            ) : (
-              visibleUsers.map((u) => (
-                <TableRow key={`${u.kind}-${u.id}`} hover>
-                  <TableCell>{u.id}</TableCell>
-                  <TableCell>{u.name}</TableCell>
-                  <TableCell>
-                    {u.kind === 'admin' ? 'مدير' : u.kind === 'teacher' ? 'معلّم' : 'طالب'}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton onClick={(e) => openMenu(e, u)} aria-label="الإجراءات">
-                      <MoreVert />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Table
+        columns={[
+          { id: 'id', label: 'المعرّف' },
+          {
+            id: 'name',
+            label: 'الاسم',
+            sortable: true,
+          },
+          {
+            id: 'kind',
+            label: 'الدور',
+            render: (u: { id: number; name: string; kind: UserKind }) =>
+              u.kind === 'admin' ? 'مدير' : u.kind === 'teacher' ? 'معلّم' : 'طالب',
+          },
+          {
+            id: 'actions',
+            label: 'إجراءات',
+            align: 'right',
+            render: (u: { id: number; name: string; kind: UserKind }) => (
+              <IconButton onClick={(e) => openMenu(e as any, u)} aria-label="الإجراءات">
+                <MoreVert />
+              </IconButton>
+            ),
+          },
+        ]}
+        data={visibleUsers}
+        loading={loading}
+        sortBy={sortBy}
+        sortDirection={sortDirection}
+        onSortChange={(col, dir) => {
+          if (col === 'name') {
+            setSortBy('name');
+            setSortDirection(dir);
+          }
+        }}
+        getRowId={(u) => `${u.kind}-${u.id}`}
+      />
 
       <Menu
         anchorEl={menuAnchor}
         open={!!menuAnchor}
         onClose={closeMenu}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <MenuItem onClick={handleView}>عرض</MenuItem>
-        <MenuItem onClick={handleEdit}>تعديل</MenuItem>
-        <MenuItem onClick={handleAskDelete} sx={{ color: 'error.main' }}>
-          حذف
-        </MenuItem>
-      </Menu>
+        items={[
+          { label: 'عرض', onClick: handleView },
+          { label: 'تعديل', onClick: handleEdit },
+          { label: 'حذف', onClick: handleAskDelete, tone: 'error' },
+        ]}
+      />
 
-      {/* حوار عرض التفاصيل */}
-      <Dialog open={viewOpen} onClose={() => setViewOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>تفاصيل المستخدم</DialogTitle>
-        <DialogContent dividers>
-          {selectedDetails ? (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="المعرّف" value={selectedDetails.id} InputProps={{ readOnly: true }} />
-              <TextField label="الاسم" value={selectedDetails.name} InputProps={{ readOnly: true }} />
-              {selectedDetails.kind === 'student' ? (
-                <>
-                  <TextField
-                    label="الرقم القومي"
-                    value={selectedDetails.national_id ?? ''}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
+      <Dialog
+        open={viewOpen}
+        onClose={() => setViewOpen(false)}
+        title="تفاصيل المستخدم"
+        actions={<Button onClick={() => setViewOpen(false)}>إغلاق</Button>}
+        fullWidth
+        maxWidth="sm"
+      >
+        {selectedDetails ? (
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Input label="المعرّف" value={selectedDetails.id} InputProps={{ readOnly: true }} />
+            <Input label="الاسم" value={selectedDetails.name} InputProps={{ readOnly: true }} />
+            {selectedDetails.kind === 'student' ? (
+              <>
+                <Input label="الرقم القومي" value={selectedDetails.national_id ?? ''} InputProps={{ readOnly: true }} />
+                <Input label="اللغة" value={selectedDetails.language ?? ''} InputProps={{ readOnly: true }} />
+                <Input label="موعد الامتحان" value={selectedDetails.exam_datetime ?? ''} InputProps={{ readOnly: true }} />
+                <Input label="تاريخ البدء" value={selectedDetails.start_date ?? ''} InputProps={{ readOnly: true }} />
+                <Input label="ملاحظات" value={selectedDetails.notes ?? ''} InputProps={{ readOnly: true }} />
+                <Input label="عرض الامتحانات" value={selectedDetails.show_exams ? 'نعم' : 'لا'} InputProps={{ readOnly: true }} />
+                <Input label="المعلّم" value={selectedDetails.teacher_id ?? ''} InputProps={{ readOnly: true }} />
+              </>
+            ) : null}
+          </Stack>
+        ) : (
+          <Typography>لا توجد بيانات للعرض</Typography>
+        )}
+      </Dialog>
+
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="تعديل المستخدم"
+        onSubmit={handleSaveEdit}
+        onCancel={() => setEditOpen(false)}
+        submitText="حفظ"
+        cancelText="إلغاء"
+        fullWidth
+        maxWidth="sm"
+      >
+        {selectedDetails ? (
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Input
+              label="الاسم"
+              value={selectedDetails.name ?? ''}
+              onChange={(e) => setSelectedDetails({ ...selectedDetails, name: e.target.value })}
+              fullWidth
+            />
+            {selectedDetails.kind === 'student' ? (
+              <>
+                <Input
+                  label="الرقم القومي"
+                  value={selectedDetails.national_id ?? ''}
+                  onChange={(e) => setSelectedDetails({ ...selectedDetails, national_id: e.target.value })}
+                  fullWidth
+                />
+                <FormControl fullWidth>
+                  <Label id="edit-language-label">اللغة</Label>
+                  <Select
+                    labelId="edit-language-label"
                     label="اللغة"
                     value={selectedDetails.language ?? ''}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    label="موعد الامتحان"
-                    value={selectedDetails.exam_datetime ?? ''}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    label="تاريخ البدء"
-                    value={selectedDetails.start_date ?? ''}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    label="ملاحظات"
-                    value={selectedDetails.notes ?? ''}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    label="عرض الامتحانات"
-                    value={selectedDetails.show_exams ? 'نعم' : 'لا'}
-                    InputProps={{ readOnly: true }}
-                  />
-                  <TextField
-                    label="المعلّم"
-                    value={selectedDetails.teacher_id ?? ''}
-                    InputProps={{ readOnly: true }}
-                  />
-                </>
-              ) : null}
-            </Stack>
-          ) : (
-            <Typography>لا توجد بيانات للعرض</Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewOpen(false)}>إغلاق</Button>
-        </DialogActions>
-      </Dialog>
+                    onChange={(e) => setSelectedDetails({ ...selectedDetails, language: e.target.value })}
+                  >
+                    <MenuItem value="ar">العربية</MenuItem>
+                    <MenuItem value="en">الإنجليزية</MenuItem>
+                  </Select>
+                </FormControl>
+                <Input
+                  label="موعد الامتحان"
+                  type="datetime-local"
+                  value={selectedDetails.exam_datetime ?? ''}
+                  onChange={(e) => setSelectedDetails({ ...selectedDetails, exam_datetime: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+                <Input
+                  label="تاريخ البدء"
+                  type="date"
+                  value={selectedDetails.start_date ?? ''}
+                  onChange={(e) => setSelectedDetails({ ...selectedDetails, start_date: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+                <Input
+                  label="ملاحظات"
+                  value={selectedDetails.notes ?? ''}
+                  onChange={(e) => setSelectedDetails({ ...selectedDetails, notes: e.target.value })}
+                  fullWidth
+                  multiline
+                  minRows={3}
+                />
+                <Checkbox
+                  checked={!!selectedDetails.show_exams}
+                  onChange={(e) => setSelectedDetails({ ...selectedDetails, show_exams: e.target.checked })}
+                  label="السماح بعرض الامتحانات"
+                />
+                <Input
+                  label="المعلّم (ID)"
+                  value={selectedDetails.teacher_id ?? ''}
+                  onChange={(e) =>
+                    setSelectedDetails({
+                      ...selectedDetails,
+                      teacher_id: Number(e.target.value) || selectedDetails.teacher_id,
+                    })
+                  }
+                  fullWidth
+                />
+              </>
+            ) : null}
+          </Stack>
+        ) : (
+          <Typography>لا توجد بيانات للتعديل</Typography>
+        )}
+      </Modal>
 
-      {/* حوار التعديل */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>تعديل المستخدم</DialogTitle>
-        <DialogContent dividers>
-          {selectedDetails ? (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField
-                label="الاسم"
-                value={selectedDetails.name ?? ''}
-                onChange={(e) => setSelectedDetails({ ...selectedDetails, name: e.target.value })}
-                fullWidth
-              />
-              {selectedDetails.kind === 'student' ? (
-                <>
-                  <TextField
-                    label="الرقم القومي"
-                    value={selectedDetails.national_id ?? ''}
-                    onChange={(e) =>
-                      setSelectedDetails({ ...selectedDetails, national_id: e.target.value })
-                    }
-                    fullWidth
-                  />
-                  <FormControl fullWidth>
-                    <InputLabel id="edit-language-label">اللغة</InputLabel>
-                    <Select
-                      labelId="edit-language-label"
-                      label="اللغة"
-                      value={selectedDetails.language ?? ''}
-                      onChange={(e) =>
-                        setSelectedDetails({ ...selectedDetails, language: e.target.value })
-                      }
-                    >
-                      <MenuItem value="ar">العربية</MenuItem>
-                      <MenuItem value="en">الإنجليزية</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <TextField
-                    label="موعد الامتحان"
-                    type="datetime-local"
-                    value={selectedDetails.exam_datetime ?? ''}
-                    onChange={(e) =>
-                      setSelectedDetails({ ...selectedDetails, exam_datetime: e.target.value })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                  />
-                  <TextField
-                    label="تاريخ البدء"
-                    type="date"
-                    value={selectedDetails.start_date ?? ''}
-                    onChange={(e) =>
-                      setSelectedDetails({ ...selectedDetails, start_date: e.target.value })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                  />
-                  <TextField
-                    label="ملاحظات"
-                    value={selectedDetails.notes ?? ''}
-                    onChange={(e) => setSelectedDetails({ ...selectedDetails, notes: e.target.value })}
-                    fullWidth
-                    multiline
-                    minRows={3}
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={!!selectedDetails.show_exams}
-                        onChange={(e) =>
-                          setSelectedDetails({ ...selectedDetails, show_exams: e.target.checked })
-                        }
-                      />
-                    }
-                    label="السماح بعرض الامتحانات"
-                  />
-                  <TextField
-                    label="المعلّم (ID)"
-                    value={selectedDetails.teacher_id ?? ''}
-                    onChange={(e) =>
-                      setSelectedDetails({
-                        ...selectedDetails,
-                        teacher_id: Number(e.target.value) || selectedDetails.teacher_id,
-                      })
-                    }
-                    fullWidth
-                  />
-                </>
-              ) : null}
-            </Stack>
-          ) : (
-            <Typography>لا توجد بيانات للتعديل</Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditOpen(false)}>إلغاء</Button>
-          <Button variant="contained" onClick={handleSaveEdit}>
-            حفظ
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* حوار التأكيد على الحذف */}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
-        <DialogTitle>تأكيد الحذف</DialogTitle>
-        <DialogContent dividers>
-          <Typography>هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteOpen(false)}>إلغاء</Button>
-          <Button variant="contained" color="error" onClick={handleConfirmDelete}>
-            حذف
-          </Button>
-        </DialogActions>
+      <Dialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="تأكيد الحذف"
+        actions={
+          <Stack direction="row" spacing={1}>
+            <Button onClick={() => setDeleteOpen(false)}>إلغاء</Button>
+            <Button variant="contained" color="error" onClick={handleConfirmDelete}>
+              حذف
+            </Button>
+          </Stack>
+        }
+      >
+        <Typography>هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع.</Typography>
       </Dialog>
 
       <Snackbar

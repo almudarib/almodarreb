@@ -1,10 +1,11 @@
-import React from "react";
-import { cn } from "@/lib/utils";
+'use client';
+import * as React from 'react';
+import { InputLabel, type InputLabelProps } from '@mui/material';
 
-export function Label({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"label">) {
-  return <label className={cn("text-sm", className)} {...props} />;
+export type LabelProps = InputLabelProps;
+
+export function Label(props: LabelProps) {
+  return <InputLabel {...props} />;
 }
 
+export default Label;

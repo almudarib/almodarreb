@@ -1,16 +1,11 @@
-import React from "react";
-import { cn } from "@/lib/utils";
+'use client';
+import * as React from 'react';
+import { TextField, type TextFieldProps } from '@mui/material';
 
-export const Input = React.forwardRef<
-  HTMLInputElement,
-  React.ComponentPropsWithoutRef<"input">
->(function Input({ className, ...props }, ref) {
-  return (
-    <input
-      ref={ref}
-      className={cn("border rounded h-9 px-3 bg-background", className)}
-      {...props}
-    />
-  );
-});
+export type InputProps = TextFieldProps;
 
+export function Input(props: InputProps) {
+  return <TextField fullWidth {...props} />;
+}
+
+export default Input;
