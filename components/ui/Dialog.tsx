@@ -7,6 +7,9 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
+import Slide from '@mui/material/Slide';
+import type { TransitionProps } from '@mui/material/transitions';
+import * as ReactFrom from 'react';
 
 export type DialogProps = Omit<MUIDialogProps, 'children'> & {
   title?: React.ReactNode;
@@ -16,7 +19,11 @@ export type DialogProps = Omit<MUIDialogProps, 'children'> & {
 
 export function Dialog({ title, actions, children, ...rest }: DialogProps) {
   return (
-    <MUIDialog {...rest}>
+    <MUIDialog
+      TransitionComponent={Slide as React.ComponentType<TransitionProps & { children: React.ReactElement<any, any> }>}
+      keepMounted
+      {...rest}
+    >
       {title ? <DialogTitle>{title}</DialogTitle> : null}
       <DialogContent dividers>{children}</DialogContent>
       {actions ? <DialogActions>{actions}</DialogActions> : null}

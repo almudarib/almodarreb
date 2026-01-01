@@ -147,6 +147,9 @@ function AddUserForm({
               fullWidth
               error={!!fieldErrors.email}
               helperText={fieldErrors.email}
+              size="small"
+              margin="dense"
+              variant="outlined"
             />
           </Box>
           <Box>
@@ -159,6 +162,9 @@ function AddUserForm({
               fullWidth
               error={!!fieldErrors.password}
               helperText={fieldErrors.password}
+              size="small"
+              margin="dense"
+              variant="outlined"
             />
           </Box>
           <Box>
@@ -170,16 +176,13 @@ function AddUserForm({
               fullWidth
               error={!!fieldErrors.name}
               helperText={fieldErrors.name}
+              size="small"
+              margin="dense"
+              variant="outlined"
             />
           </Box>
           {/* تمت إزالة حقول الطالب بالكامل */}
-          <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
-            <Stack direction="row" spacing={2} justifyContent="flex-end">
-              <Button type="submit" variant="contained" loading={submitting} loadingText="جاري الحفظ...">
-                حفظ
-              </Button>
-            </Stack>
-          </Box>
+
         </Box>
       </Form>
       <Snackbar
@@ -245,7 +248,7 @@ function UsersTable() {
       data = data.filter((u) => u.name.toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q));
     }
     data = [...data].sort((a, b) => {
-      const cmp = a.name.localeCompare(b.name, 'ar');
+      const cmp = a.name.localeCompare(b.name, 'en');
       return sortDirection === 'asc' ? cmp : -cmp;
     });
     return data;
@@ -363,6 +366,9 @@ function UsersTable() {
           placeholder="ابحث بالاسم أو المعرّف"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          size="small"
+          margin="dense"
+          variant="outlined"
         />
       </Stack>
 
@@ -435,8 +441,8 @@ function UsersTable() {
       >
         {selectedDetails ? (
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Input label="المعرّف" value={selectedDetails.id} InputProps={{ readOnly: true }} />
-            <Input label="الاسم" value={selectedDetails.name} InputProps={{ readOnly: true }} />
+            <Input label="المعرّف" value={selectedDetails.id} InputProps={{ readOnly: true }} size="small" margin="dense" variant="outlined" />
+            <Input label="الاسم" value={selectedDetails.name} InputProps={{ readOnly: true }} size="small" margin="dense" variant="outlined" />
             {/* تمت إزالة عرض تفاصيل الطالب */}
           </Stack>
         ) : (
@@ -462,6 +468,9 @@ function UsersTable() {
               value={selectedDetails.name ?? ''}
               onChange={(e) => setSelectedDetails({ ...selectedDetails, name: e.target.value })}
               fullWidth
+              size="small"
+              margin="dense"
+              variant="outlined"
             />
             {/* تمت إزالة حقول تعديل الطالب */}
           </Stack>
