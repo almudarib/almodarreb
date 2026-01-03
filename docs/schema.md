@@ -176,3 +176,25 @@ CREATE TABLE user_roles (
     role_id INT REFERENCES roles(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, role_id)
 );
+
+12️⃣ تخزين جلسات الفيديو (Supabase Storage)
+
+- اسم الـ bucket: session-videos (خاص)
+- تنظيم المسارات: sessions/YYYY/MM/DD/<stamp>_<rand>_<filename>
+- أمثلة:
+  - فيديو مرفوع من الجهاز: storage://session-videos/sessions/2026/01/03/1735900000000_abcd1234_lesson1.mp4
+  - بيانات وصفية JSON ملاصقة: storage://session-videos/sessions/2026/01/03/1735900000000_abcd1234_lesson1.json
+  - مصدر يوتيوب: يتم رفع ملف JSON يحوي youtubeId والرابط الأصلي بنفس تنظيم التاريخ
+
+البيانات الوصفية المخزّنة (JSON):
+- source: 'upload' | 'youtube'
+- youtubeId: عند مصدر يوتيوب، وإلا null
+- originalUrl: الرابط الأصلي عند يوتيوب
+- filename, contentType: عند الرفع من الجهاز
+- sizeBytes: حجم الملف إن توفر
+- durationSeconds: المدة إن توفرت (افتراضي null)
+- createdAt: طابع زمني ISO
+
+ملاحظات:
+- احترام حدود الأحجام: الفيديو ≤ 500MB، المستندات ≤ 50MB
+- روابط يوتيوب لا يُحمّل الفيديو نفسه، إنما يُحفظ مرجع JSON منظم بالتاريخ.

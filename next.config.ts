@@ -1,7 +1,12 @@
-import type { NextConfig } from "next";
+ 
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   cacheComponents: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "700mb",
+    },
+  },
 };
 
 export default nextConfig;
