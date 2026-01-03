@@ -1,10 +1,11 @@
 'use client';
 import * as React from 'react';
 import type { StudentRecord } from '@/app/actions/students';
-import { updateStudent, getStudentProgress } from '@/app/actions/students';
+import { updateStudent, getStudentProgress, getStudentLoginHistory } from '@/app/actions/students';
 import type { UpdateStudentInput } from '@/app/actions/students';
 import StudentProgress from '@/components/student/StudentProgress';
 import type { StudentProgressData } from '@/app/actions/students';
+import type { StudentLoginEvent } from '@/app/actions/students';
 import { useRouter } from 'next/navigation';
 
 export type StudentDetailsModalProps = {
@@ -23,6 +24,9 @@ export function StudentDetailsModal({
   const router = useRouter();
   const [saving, setSaving] = React.useState(false);
   const [progress, setProgress] = React.useState<StudentProgressData | null>(null);
+  const [loginOpen, setLoginOpen] = React.useState(false);
+  const [loginLoading, setLoginLoading] = React.useState(false);
+  const [loginHistory, setLoginHistory] = React.useState<StudentLoginEvent[] | null>(null);
 
   // حالة النموذج القابلة للتحرير
   const [form, setForm] = React.useState<Partial<StudentRecord>>({});
@@ -57,6 +61,23 @@ export function StudentDetailsModal({
       active = false;
     };
   }, [open, student]);
+
+  React.useEffect(() => {
+    let active = true;
+    async function loadLogins() {
+      if (!student || !loginOpen) return;
+      setLoginLoading(true);
+      const r = await getStudentLoginHistory(student.id);
+      if (!active) return;
+      setLoginLoading(false);
+      if (r.ok) setLoginHistory(r.events);
+      else setLoginHistory([]);
+    }
+    loadLogins();
+    return () => {
+      active = false;
+    };
+  }, [student, loginOpen]);
 
   function setField<K extends keyof StudentRecord>(key: K, value: StudentRecord[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -98,16 +119,25 @@ export function StudentDetailsModal({
       <div className="fixed inset-0 z-50">
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
         <div className="relative z-10 mx-auto my-8 w-full max-w-3xl px-4">
-          <div className="rounded-lg bg-white dark:bg-neutral-900 shadow-lg">
+          <div className="rounded-lg bg-white shadow-lg">
             <div className="flex items-center justify-between border-b px-6 py-4">
               <h2 className="text-lg font-semibold">بيانات الطالب</h2>
-              <button
-                type="button"
-                className="rounded-md px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                onClick={onClose}
-              >
-                إغلاق
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50"
+                  onClick={() => setLoginOpen((v) => !v)}
+                >
+                  {loginOpen ? 'إخفاء التعقب' : 'تعقب تسجيلات الدخول'}
+                </button>
+                <button
+                  type="button"
+                  className="rounded-md px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  onClick={onClose}
+                >
+                  إغلاق
+                </button>
+              </div>
             </div>
             {!student ? null : (
               <div className="px-6 py-4" dir="rtl">
@@ -117,7 +147,7 @@ export function StudentDetailsModal({
                     <div>
                       <label className="mb-1 block text-sm font-medium">اسم الطالب</label>
                       <input
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         value={form.name ?? ''}
                         onChange={(e) => setField('name', e.target.value)}
                       />
@@ -125,7 +155,7 @@ export function StudentDetailsModal({
                     <div>
                       <label className="mb-1 block text-sm font-medium">رقم الهوية</label>
                       <input
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         inputMode="numeric"
                         value={form.national_id ?? ''}
                         onChange={(e) => setField('national_id', e.target.value)}
@@ -135,7 +165,7 @@ export function StudentDetailsModal({
                       <label className="mb-1 block text-sm font-medium">تاريخ الامتحان</label>
                       <input
                         type="datetime-local"
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         value={form.exam_datetime ? String(form.exam_datetime).slice(0, 16) : ''}
                         onChange={(e) => setField('exam_datetime', e.target.value)}
                       />
@@ -144,7 +174,7 @@ export function StudentDetailsModal({
                       <label className="mb-1 block text-sm font-medium">تاريخ البدء</label>
                       <input
                         type="date"
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         value={form.start_date ?? ''}
                         onChange={(e) => setField('start_date', e.target.value)}
                       />
@@ -153,7 +183,7 @@ export function StudentDetailsModal({
                       <label className="mb-1 block text-sm font-medium">تاريخ التسجيل</label>
                       <input
                         type="date"
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         value={form.registration_date ?? ''}
                         onChange={(e) => setField('registration_date', e.target.value)}
                       />
@@ -162,7 +192,7 @@ export function StudentDetailsModal({
                       <label className="mb-1 block text-sm font-medium">آخر تسجيل دخول</label>
                       <input
                         type="datetime-local"
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         value={form.last_login_at ? String(form.last_login_at).slice(0, 16) : ''}
                         onChange={(e) => setField('last_login_at', e.target.value)}
                       />
@@ -170,7 +200,7 @@ export function StudentDetailsModal({
                     <div className="md:col-span-1">
                       <label className="mb-1 block text-sm font-medium">ملاحظة</label>
                       <textarea
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         rows={3}
                         value={form.notes ?? ''}
                         onChange={(e) => setField('notes', e.target.value)}
@@ -179,7 +209,7 @@ export function StudentDetailsModal({
                     <div>
                       <label className="mb-1 block text-sm font-medium">الحالة</label>
                       <input
-                        className="w-full rounded-md border px-3 py-2 text-sm"
+                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
                         value={form.status ?? ''}
                         onChange={(e) => setField('status', e.target.value)}
                       />
@@ -188,13 +218,35 @@ export function StudentDetailsModal({
                       <input
                         id="details_show_exams"
                         type="checkbox"
-                        className="h-4 w-4 rounded border"
+                        className="h-4 w-4 rounded border bg-white"
                         checked={!!form.show_exams}
                         onChange={(e) => setField('show_exams', e.target.checked)}
                       />
                       <label htmlFor="details_show_exams" className="text-sm">إظهار الاختبارات</label>
                     </div>
                   </div>
+                  {loginOpen ? (
+                    <div>
+                      <div className="mb-2 text-sm font-medium">سجل تسجيلات الدخول</div>
+                      {loginLoading ? (
+                        <div className="text-sm text-neutral-500">جاري التحميل...</div>
+                      ) : (
+                        <div className="max-h-64 overflow-y-auto rounded-md border bg-white">
+                          <ul className="divide-y">
+                            {loginHistory && loginHistory.length > 0 ? (
+                              loginHistory.map((ev, idx) => (
+                                <li key={idx} className="px-3 py-2 text-sm">
+                                  {new Date(ev.opened_at).toLocaleString('ar-EG')}
+                                </li>
+                              ))
+                            ) : (
+                              <li className="px-3 py-2 text-sm">لا توجد سجلات</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                   <StudentProgress data={progress} />
                 </div>
               </div>

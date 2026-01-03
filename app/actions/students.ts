@@ -312,6 +312,40 @@ export async function getStudentProgress(
   }
 }
 
+export type StudentLoginEvent = {
+  opened_at: string;
+  duration_minutes: number | null;
+};
+
+export async function getStudentLoginHistory(
+  studentId: number,
+): Promise<{ ok: true; events: StudentLoginEvent[] } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('student_sessions')
+      .select('opened_at,duration_minutes')
+      .eq('student_id', studentId)
+      .order('opened_at', { ascending: false });
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    const events: StudentLoginEvent[] = (data ?? []).map((row) => {
+      const r = (row as unknown) as Record<string, unknown>;
+      return {
+        opened_at: r.opened_at as string,
+        duration_minutes: (r.duration_minutes as number | null) ?? null,
+      };
+    });
+    return { ok: true, events };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
 export type ListStudentsQuery = {
   status?: string;
   teacher_id?: number;
