@@ -502,12 +502,12 @@ export async function getTeacherAccountingDetails(
         pending_entries: info.count,
       };
     });
-    const filteredStudents = students; // أعرض جميع الطلاب بما في ذلك من رصيده 0
-    const total_due = students.reduce((sum, s) => sum + s.pending_amount, 0);
+    const filteredStudents = students.filter((s) => s.pending_amount > 0 && s.pending_entries > 0);
+    const total_due = filteredStudents.reduce((sum, s) => sum + s.pending_amount, 0);
     const details: TeacherAccountingDetails = {
       teacher_id: teacherId,
       teacher_name: (userRow.name as string) ?? '',
-      students_count: (studentsRows ?? []).length,
+      students_count: filteredStudents.length,
       total_due,
       per_student_fee: (feeRow?.per_student_fee as number | null) ?? null,
       students: filteredStudents,

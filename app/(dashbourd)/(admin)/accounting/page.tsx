@@ -99,16 +99,23 @@
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
  
-   function formatCurrency(n: number) {
-     try {
-       return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(
-         n || 0,
-       );
-     } catch {
-       return `${n}`;
-     }
-   }
- 
+  function formatCurrency(n: number) {
+    try {
+      return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(
+        n || 0,
+      );
+    } catch {
+      return `${n}`;
+    }
+  }
+
+  const totals = React.useMemo(() => {
+    const teacherCount = stats.length;
+    const studentsCount = stats.reduce((sum, s) => sum + (s.students_count || 0), 0);
+    const totalDue = stats.reduce((sum, s) => sum + (s.total_due || 0), 0);
+    return { teacherCount, studentsCount, totalDue };
+  }, [stats]);
+
   const columns: Column<TeacherAccountingStats>[] = [
     { id: 'teacher_name', label: 'الأستاذ' },
     {
@@ -204,7 +211,37 @@
            تهيئة القيمة الافتراضية
          </Button>
        </Stack>
- 
+
+       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={2}>
+         <Card elevation={1} sx={{ flex: 1 }}>
+           <CardContent>
+             <Stack direction="row" justifyContent="space-between" alignItems="center">
+               <Typography variant="subtitle2">المبلغ الإجمالي</Typography>
+               <Typography variant="h5" color="success.main">{formatCurrency(totals.totalDue)}</Typography>
+             </Stack>
+             <Typography variant="caption" color="text.secondary">إجمالي المستحقات</Typography>
+           </CardContent>
+         </Card>
+         <Card elevation={1} sx={{ flex: 1 }}>
+           <CardContent>
+             <Stack direction="row" justifyContent="space-between" alignItems="center">
+               <Typography variant="subtitle2">إجمالي الطلاب</Typography>
+               <Typography variant="h5">{totals.studentsCount}</Typography>
+             </Stack>
+             <Typography variant="caption" color="text.secondary">جميع الطلاب المسجلين</Typography>
+           </CardContent>
+         </Card>
+         <Card elevation={1} sx={{ flex: 1 }}>
+           <CardContent>
+             <Stack direction="row" justifyContent="space-between" alignItems="center">
+               <Typography variant="subtitle2">عدد الأساتذة</Typography>
+               <Typography variant="h5">{totals.teacherCount}</Typography>
+             </Stack>
+             <Typography variant="caption" color="text.secondary">الأساتذة النشطين</Typography>
+           </CardContent>
+         </Card>
+       </Stack>
+
        <Card>
          <CardHeader>
            <Typography>جدول الحسابات</Typography>
