@@ -16,7 +16,6 @@ import { MoreVert } from '@mui/icons-material';
 import {
   createUser,
   listAllUsersSummary,
-  listUsersByKind,
   getUserDetails,
   updateUser,
   deleteUserByKind,
@@ -131,7 +130,7 @@ function AddUserForm({
           {error}
         </Alert>
       )}
-      <Form id={formId} onSubmit={handleSubmit}>
+      <Form id={formId} onSubmit={handleSubmit} aria-busy={submitting}>
         <Box
           sx={{
             display: 'grid',
@@ -420,20 +419,20 @@ function UsersTable() {
           {
             id: 'kind',
             label: 'الدور',
-            render: (u: { id: number; name: string; kind: UserKind }) =>
+            render: (u) =>
               u.kind === 'admin' ? 'مدير' : 'معلّم',
           },
           {
             id: 'createdAt',
             label: 'تاريخ التسجيل',
-            render: (u: { createdAt?: string }) =>
+            render: (u) =>
               u.createdAt ? new Date(u.createdAt).toLocaleString('ar-EG') : '-',
           },
           {
             id: 'actions',
             label: 'إجراءات',
             align: 'right',
-            render: (u: { id: number; name: string; kind: UserKind }) => (
+            render: (u) => (
             <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => openMenu(e, u)} aria-label="الإجراءات">
               <MoreVert />
             </IconButton>
@@ -450,7 +449,7 @@ function UsersTable() {
           setSortDirection(dir);
         }
       }}
-      getRowId={(u: { id: number; name: string; kind: UserKind }) => `${u.kind}-${u.id}`}
+      getRowId={(u) => `${u.kind}-${u.id}`}
     />
 
       <Menu
