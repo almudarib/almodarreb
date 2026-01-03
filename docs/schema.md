@@ -198,3 +198,18 @@ CREATE TABLE user_roles (
 ملاحظات:
 - احترام حدود الأحجام: الفيديو ≤ 500MB، المستندات ≤ 50MB
 - روابط يوتيوب لا يُحمّل الفيديو نفسه، إنما يُحفظ مرجع JSON منظم بالتاريخ.
+
+13️⃣ جدول TEACHER_ACCOUNTING_SETTINGS
+CREATE TABLE teacher_accounting_settings (
+    teacher_id BIGINT PRIMARY KEY,
+    per_student_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_teacher_fee_user
+        FOREIGN KEY (teacher_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+ملاحظات:
+- يسمح هذا الجدول بتخصيص قيمة التحصيل لكل أستاذ بشكل منفصل.
+- في حال عدم وجود سجل للأستاذ، تُستخدم القيمة الافتراضية 0.

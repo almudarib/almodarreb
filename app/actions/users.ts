@@ -13,6 +13,7 @@ type BaseInput = {
 
 type TeacherInput = BaseInput & {
   kind: 'teacher';
+  per_student_fee?: number;
 };
 
 type AdminInput = BaseInput & {
@@ -103,6 +104,20 @@ export async function createUser(input: CreateUserInput): Promise<CreateUserResu
       });
     if (userRoleError) {
       return { ok: false, error: userRoleError.message, details: userRoleError };
+    }
+
+    if (input.kind === 'teacher') {
+      const fee = Number((input as TeacherInput).per_student_fee ?? 0);
+      const { error: feeErr } = await supabase
+        .from('teacher_accounting_settings')
+        .upsert({
+          teacher_id: userInsert.id as number,
+          per_student_fee: Number.isFinite(fee) && fee >= 0 ? fee : 0,
+        })
+        .eq('teacher_id', userInsert.id as number);
+      if (feeErr) {
+        return { ok: false, error: feeErr.message, details: feeErr };
+      }
     }
 
     return {

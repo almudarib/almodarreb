@@ -32,6 +32,7 @@ function AddUserForm({
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [name, setName] = React.useState('');
+  const [defaultFee, setDefaultFee] = React.useState('20');
   // لا توجد حقول خاصة بالطلاب بعد الإزالة
 
   // حالة الواجهة العامة
@@ -55,6 +56,12 @@ function AddUserForm({
     }
     if (!name.trim()) {
       errs.name = 'الاسم مطلوب';
+    }
+    if (kind === 'teacher') {
+      const fee = Number(defaultFee);
+      if (!Number.isFinite(fee) || fee < 0) {
+        errs.per_student_fee = 'القيمة الافتراضية يجب أن تكون رقمًا صالحًا';
+      }
     }
     // لا يوجد تحقق خاص بالطالب
     return errs;
@@ -86,6 +93,7 @@ function AddUserForm({
         email,
         password,
         name,
+        per_student_fee: Number(defaultFee),
       };
     }
     const res = await createUser(input);
@@ -99,6 +107,7 @@ function AddUserForm({
     setEmail('');
     setPassword('');
     setName('');
+    setDefaultFee('20');
     // إزالة إعادة تعيين الحقول الخاصة بالطالب
     setSuccessOpen(true);
     onCreated();
@@ -181,6 +190,22 @@ function AddUserForm({
               variant="outlined"
             />
           </Box>
+          {kind === 'teacher' ? (
+            <Box>
+              <Input
+                label="القيمة الافتراضية لكل طالب (USD)"
+                type="number"
+                value={defaultFee}
+                onChange={(e) => setDefaultFee(e.target.value)}
+                fullWidth
+                error={!!fieldErrors.per_student_fee}
+                helperText={fieldErrors.per_student_fee}
+                size="small"
+                margin="dense"
+                variant="outlined"
+              />
+            </Box>
+          ) : null}
           {/* تمت إزالة حقول الطالب بالكامل */}
 
         </Box>
