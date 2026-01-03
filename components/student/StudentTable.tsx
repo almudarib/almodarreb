@@ -55,6 +55,21 @@ export function StudentTable({
   }, [params]);
   const [selected, setSelected] = React.useState<StudentWithTeacher | null>(null);
 
+  React.useEffect(() => {
+    const currentParams = new URLSearchParams(params.toString());
+    const current = currentParams.get('search') ?? '';
+    const next = search ?? '';
+    if (current === next) return;
+    const handle = window.setTimeout(() => {
+      const qp = new URLSearchParams(params.toString());
+      if (next) qp.set('search', next);
+      else qp.delete('search');
+      qp.set('page', '1');
+      router.push(`?${qp.toString()}`);
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [search, params, router]);
+
   function openDetails(stu: StudentWithTeacher) {
     setSelected(stu);
     setDetailsOpen(true);
@@ -157,7 +172,7 @@ export function StudentTable({
         <Stack direction="row" spacing={2}>
           <TextField
             fullWidth
-            placeholder="البحث الذكي..."
+            placeholder="ابحث بالاسم أو رقم الهوية أو الأستاذ المشرف"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => {

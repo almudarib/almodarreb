@@ -433,7 +433,11 @@ export async function listStudents(
         return { ok: false, error: examErr.message, details: examErr };
       }
       const ids = Array.from(
-        new Set((examRows ?? []).map((r) => (r as any).student_id).filter((id) => typeof id === 'number')),
+        new Set(
+          (examRows ?? [])
+            .map((r) => (r as unknown as { student_id: unknown }).student_id)
+            .filter((id) => typeof id === 'number'),
+        ),
       ) as number[];
       if (ids.length === 0) {
         return { ok: true, students: [], page: q.page, perPage: q.per_page, total: 0 };
@@ -446,7 +450,28 @@ export async function listStudents(
     if (q.created_at_to) builder = builder.lte('created_at', q.created_at_to);
     if (q.search) {
       const term = q.search.replace(/%/g, '\\%').replace(/_/g, '\\_');
-      builder = builder.or(`name.ilike.%${term}%,national_id.ilike.%${term}%`);
+      let teacherIds: number[] = [];
+      {
+        const { data: teacherRows, error: teacherErr } = await supabase
+          .from('users')
+          .select('id')
+          .ilike('name', `%${term}%`);
+        if (teacherErr) {
+          return { ok: false, error: teacherErr.message, details: teacherErr };
+        }
+        teacherIds = Array.from(
+          new Set(
+            (teacherRows ?? [])
+              .map((r) => (r as unknown as { id: unknown }).id)
+              .filter((id) => typeof id === 'number'),
+          ),
+        ) as number[];
+      }
+      const orParts = [`name.ilike.%${term}%`, `national_id.ilike.%${term}%`];
+      if (teacherIds.length > 0) {
+        orParts.push(`teacher_id.in.(${teacherIds.join(',')})`);
+      }
+      builder = builder.or(orParts.join(','));
     }
 
     builder = builder.order(q.sort_by, { ascending: q.sort_dir === 'asc', nullsFirst: false });
