@@ -317,6 +317,8 @@ export type ListStudentsQuery = {
   teacher_id?: number;
   search?: string;
   show_exams?: boolean;
+  exam_datetime_from?: string | Date;
+  exam_datetime_to?: string | Date;
   registration_date_from?: string | Date;
   registration_date_to?: string | Date;
   created_at_from?: string | Date;
@@ -358,6 +360,8 @@ export async function listStudents(
       teacher_id?: number;
       search?: string;
       show_exams?: boolean;
+      exam_datetime_from?: string;
+      exam_datetime_to?: string;
       registration_date_from?: string;
       registration_date_to?: string;
       created_at_from?: string;
@@ -391,9 +395,51 @@ export async function listStudents(
         { count: 'exact' },
       );
 
-    if (q.status) builder = builder.eq('status', q.status);
+    if (q.status) {
+      const s = String(q.status).trim().toLowerCase();
+      const mapped =
+        s === 'الكل' || s === 'كل' || s === 'all'
+          ? null
+          : s === 'نشط'
+          ? 'active'
+          : s === 'غير نشط'
+          ? 'inactive'
+          : s === 'ناجح'
+          ? 'passed'
+          : s === 'راسب'
+          ? 'failed'
+          : q.status;
+      if (mapped) builder = builder.eq('status', mapped);
+    }
     if (q.teacher_id) builder = builder.eq('teacher_id', q.teacher_id);
     if (q.show_exams !== undefined) builder = builder.eq('show_exams', q.show_exams);
+    if (q.exam_datetime_from || q.exam_datetime_to) {
+      const { exam_datetime_from: edfRaw, exam_datetime_to: edtRaw } = q;
+      const edf = edfRaw ? String(edfRaw) : undefined;
+      const edt = (() => {
+        if (!edtRaw) return undefined;
+        const toIso = String(edtRaw);
+        const hasTime = /\dT\d/.test(toIso);
+        if (hasTime) return toIso;
+        const d = new Date(toIso.replace('+00:00', 'Z'));
+        d.setUTCHours(23, 59, 59, 999);
+        return d.toISOString().replace('Z', '+00:00');
+      })();
+      let examsQuery = supabase.from('exam_results').select('student_id');
+      if (edf) examsQuery = examsQuery.gte('taken_at', edf);
+      if (edt) examsQuery = examsQuery.lte('taken_at', edt);
+      const { data: examRows, error: examErr } = await examsQuery;
+      if (examErr) {
+        return { ok: false, error: examErr.message, details: examErr };
+      }
+      const ids = Array.from(
+        new Set((examRows ?? []).map((r) => (r as any).student_id).filter((id) => typeof id === 'number')),
+      ) as number[];
+      if (ids.length === 0) {
+        return { ok: true, students: [], page: q.page, perPage: q.per_page, total: 0 };
+      }
+      builder = builder.in('id', ids);
+    }
     if (q.registration_date_from) builder = builder.gte('registration_date', q.registration_date_from);
     if (q.registration_date_to) builder = builder.lte('registration_date', q.registration_date_to);
     if (q.created_at_from) builder = builder.gte('created_at', q.created_at_from);

@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Stack, Typography, Pagination, TextField } from '@mui/material';
+import { Box, Stack, Typography, Pagination, TextField, MenuItem } from '@mui/material';
 import Table, { type Column } from '@/components/ui/Table';
 import { Button } from '@/components/ui/button';
 import type { StudentRecord } from '@/app/actions/students';
@@ -42,6 +42,17 @@ export function StudentTable({
   const [addOpen, setAddOpen] = React.useState(false);
   const [status, setStatus] = React.useState<string | undefined>(undefined);
   const [showExams, setShowExams] = React.useState<boolean | undefined>(undefined);
+  const [examFrom, setExamFrom] = React.useState<string>('');
+  const [examTo, setExamTo] = React.useState<string>('');
+  React.useEffect(() => {
+    const qp = new URLSearchParams(params.toString());
+    const s = qp.get('status');
+    setStatus(s ?? undefined);
+    const se = qp.get('show_exams');
+    setShowExams(se === null ? undefined : se === 'true');
+    setExamFrom(qp.get('exam_datetime_from') ?? '');
+    setExamTo(qp.get('exam_datetime_to') ?? '');
+  }, [params]);
   const [selected, setSelected] = React.useState<StudentWithTeacher | null>(null);
 
   function openDetails(stu: StudentWithTeacher) {
@@ -74,6 +85,10 @@ export function StudentTable({
     else qp.delete('status');
     if (showExams !== undefined) qp.set('show_exams', String(showExams));
     else qp.delete('show_exams');
+    if (examFrom) qp.set('exam_datetime_from', examFrom);
+    else qp.delete('exam_datetime_from');
+    if (examTo) qp.set('exam_datetime_to', examTo);
+    else qp.delete('exam_datetime_to');
     qp.set('page', '1');
     router.push(`?${qp.toString()}`);
   }
@@ -153,10 +168,34 @@ export function StudentTable({
             بحث
           </Button>
           <TextField
+            select
             label="الحالة"
             value={status ?? ''}
             onChange={(e) => setStatus(e.target.value || undefined)}
-            sx={{ minWidth: 160 }}
+            sx={{ minWidth: 180 }}
+          >
+            <MenuItem value=""></MenuItem>
+            <MenuItem value="all">الكل</MenuItem>
+            <MenuItem value="passed">ناجح</MenuItem>
+            <MenuItem value="failed">راسب</MenuItem>
+            <MenuItem value="active">نشط</MenuItem>
+            <MenuItem value="inactive">غير نشط</MenuItem>
+          </TextField>
+          <TextField
+            label="تاريخ الامتحان من"
+            type="date"
+            value={examFrom}
+            onChange={(e) => setExamFrom(e.target.value)}
+            sx={{ minWidth: 180 }}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            label="تاريخ الامتحان إلى"
+            type="date"
+            value={examTo}
+            onChange={(e) => setExamTo(e.target.value)}
+            sx={{ minWidth: 180 }}
+            InputLabelProps={{ shrink: true }}
           />
           <TextField
             select
@@ -170,9 +209,9 @@ export function StudentTable({
             }}
             sx={{ minWidth: 160 }}
           >
-            <option value=""></option>
-            <option value="true">ظاهر</option>
-            <option value="false">مخفي</option>
+            <MenuItem value=""></MenuItem>
+            <MenuItem value="true">ظاهر</MenuItem>
+            <MenuItem value="false">مخفي</MenuItem>
           </TextField>
           <Button variant="outlined" onClick={applyFilters}>
             تطبيق الفلاتر

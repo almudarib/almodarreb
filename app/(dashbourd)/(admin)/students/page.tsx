@@ -20,6 +20,14 @@ async function StudentsContent({
       typeof sp.show_exams === 'string'
         ? sp.show_exams === 'true'
         : undefined,
+    exam_datetime_from:
+      typeof sp.exam_datetime_from === 'string'
+        ? sp.exam_datetime_from
+        : undefined,
+    exam_datetime_to:
+      typeof sp.exam_datetime_to === 'string'
+        ? sp.exam_datetime_to
+        : undefined,
     registration_date_from:
       typeof sp.registration_date_from === 'string'
         ? sp.registration_date_from
