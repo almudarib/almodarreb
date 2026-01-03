@@ -2,16 +2,7 @@
 
 import * as React from 'react';
 import { Alert, Box, Container, FormControl, FormHelperText, IconButton, MenuItem, Select, Snackbar, Stack, Typography, Paper, Chip } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardContent, CardActions } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/Dialog';
-import { Modal } from '@/components/ui/Modal';
-import { Form } from '@/components/ui/Form';
-import { Menu } from '@/components/ui/Menu';
-import Table, { type Column } from '@/components/ui/Table';
+import { Input, Label, Card, CardHeader, CardContent, CardActions, Button, Dialog, Modal, Form, Menu, Table } from '@/components/ui';
 import { MoreVert } from '@mui/icons-material';
 import {
   createUser,
@@ -27,15 +18,6 @@ import {
 
 // نوع الدور المستخدم في الواجهة
 type UserKind = 'admin' | 'teacher';
-
-// نوع الصف المستخدم في الجدول
-type UserRow = {
-  id: number;
-  name: string;
-  kind: UserKind;
-  email: string;
-  createdAt: string;
-};
 
 // عنصر واجهة لإضافة مستخدم جديد (طالب/مسؤول/معلم)
 function AddUserForm({
@@ -155,7 +137,7 @@ function AddUserForm({
                 labelId="kind-label"
                 label="نوع المستخدم"
                 value={kind}
-                onChange={(e: SelectChangeEvent<UserKind | ''>) => setKind(e.target.value as UserKind)}
+                onChange={(e) => setKind(e.target.value as UserKind)}
                 required
               >
                 {/* تمت إزالة خيار الطالب */}
@@ -169,7 +151,7 @@ function AddUserForm({
             <Input
               label="البريد الإلكتروني"
               value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               fullWidth
               error={!!fieldErrors.email}
@@ -184,7 +166,7 @@ function AddUserForm({
               label="كلمة المرور"
               type="password"
               value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
               fullWidth
               error={!!fieldErrors.password}
@@ -198,7 +180,7 @@ function AddUserForm({
             <Input
               label="الاسم"
               value={name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               required
               fullWidth
               error={!!fieldErrors.name}
@@ -214,7 +196,7 @@ function AddUserForm({
                 label="القيمة الافتراضية لكل طالب (USD)"
                 type="number"
                 value={defaultFee}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDefaultFee(e.target.value)}
+                onChange={(e) => setDefaultFee(e.target.value)}
                 fullWidth
                 error={!!fieldErrors.per_student_fee}
                 helperText={fieldErrors.per_student_fee}
@@ -243,7 +225,7 @@ function AddUserForm({
 // واجهة عرض/بحث/تصفية/ترتيب المستخدمين مع إجراءات CRUD
 function UsersTable() {
   // الحالة العامة
-  const [users, setUsers] = React.useState<UserRow[]>([]);
+  const [users, setUsers] = React.useState<Array<{ id: number; name: string; kind: UserKind; email: string; createdAt: string }>>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [roleFilter, setRoleFilter] = React.useState<UserKind | 'all'>('all');
@@ -298,7 +280,7 @@ function UsersTable() {
   }, [users, roleFilter, searchQuery, sortDirection]);
 
   // فتح قائمة الإجراءات
-  function openMenu(e: React.MouseEvent<HTMLButtonElement>, user: UserRow) {
+  function openMenu(e: React.MouseEvent<HTMLButtonElement>, user: { id: number; name: string; kind: UserKind }) {
     setMenuAnchor(e.currentTarget);
     setMenuUser(user);
   }
@@ -408,15 +390,15 @@ function UsersTable() {
           fullWidth
           placeholder="ابحث بالاسم أو المعرّف"
           value={searchQuery}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+          onChange={(e) => setSearchQuery(e.target.value)}
           size="small"
           margin="dense"
           variant="outlined"
         />
       </Stack>
 
-      {(() => {
-        const columns: Column<UserRow>[] = [
+      <Table
+        columns={[
           {
             id: 'name',
             label: 'الاسم',
@@ -429,45 +411,38 @@ function UsersTable() {
           {
             id: 'kind',
             label: 'الدور',
-            render: (u) => (u.kind === 'admin' ? 'مدير' : 'معلّم'),
+            render: (u: { id: number; name: string; kind: UserKind }) =>
+              u.kind === 'admin' ? 'مدير' : 'معلّم',
           },
           {
             id: 'createdAt',
             label: 'تاريخ التسجيل',
-            render: (u) =>
+            render: (u: { createdAt?: string }) =>
               u.createdAt ? new Date(u.createdAt).toLocaleString('ar-EG') : '-',
           },
           {
             id: 'actions',
             label: 'إجراءات',
             align: 'right',
-            render: (u) => (
-              <IconButton
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => openMenu(e, u)}
-                aria-label="الإجراءات"
-              >
+            render: (u: { id: number; name: string; kind: UserKind }) => (
+              <IconButton onClick={(e) => openMenu(e, u)} aria-label="الإجراءات">
                 <MoreVert />
               </IconButton>
             ),
           },
-        ];
-        return (
-          <Table
-            columns={columns}
-            data={visibleUsers}
-            loading={loading}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            onSortChange={(col: string, dir: 'asc' | 'desc') => {
-              if (col === 'name') {
-                setSortBy('name');
-                setSortDirection(dir);
-              }
-            }}
-            getRowId={(u) => `${u.kind}-${u.id}`}
-          />
-        );
-      })()}
+        ]}
+        data={visibleUsers}
+        loading={loading}
+        sortBy={sortBy}
+        sortDirection={sortDirection}
+        onSortChange={(col, dir) => {
+          if (col === 'name') {
+            setSortBy('name');
+            setSortDirection(dir);
+          }
+        }}
+        getRowId={(u) => `${u.kind}-${u.id}`}
+      />
 
       <Menu
         anchorEl={menuAnchor}
@@ -516,7 +491,7 @@ function UsersTable() {
             <Input
               label="الاسم"
               value={selectedDetails.name ?? ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedDetails({ ...selectedDetails, name: e.target.value })}
+              onChange={(e) => setSelectedDetails({ ...selectedDetails, name: e.target.value })}
               fullWidth
               size="small"
               margin="dense"

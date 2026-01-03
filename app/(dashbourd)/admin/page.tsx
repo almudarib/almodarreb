@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { Box, Container, Stack, Typography, Snackbar, Alert, LinearProgress } from '@mui/material';
-import { Card, CardHeader, CardContent, Button } from '@/components/ui';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { listUsersByKind } from '@/app/actions/users';
 import { listStudents } from '@/app/actions/students';
@@ -69,40 +70,40 @@ export default function AdminDashboardPage() {
         >
           <Card elevation={1}>
             <CardHeader title="عدد المعلّمين" />
-            <CardContent>
-              <Typography variant="h3" sx={{ mb: 1 }}>{stats.teachers}</Typography>
-              <Button onClick={() => router.push('/users')} variant="contained" size="small">إدارة المستخدمين</Button>
-            </CardContent>
-          </Card>
-          <Card elevation={1}>
-            <CardHeader title="عدد الطلاب" />
-            <CardContent>
-              <Typography variant="h3" sx={{ mb: 1 }}>{stats.students}</Typography>
-              <Button onClick={() => router.push('/students')} variant="contained" size="small">عرض الطلاب</Button>
-            </CardContent>
-          </Card>
-          <Card elevation={1}>
-            <CardHeader title="عدد الامتحانات" />
-            <CardContent>
-              <Typography variant="h3" sx={{ mb: 1 }}>{stats.exams}</Typography>
-              <Button onClick={() => router.push('/exam')} variant="contained" size="small">عرض الامتحانات</Button>
-            </CardContent>
-          </Card>
-          <Card elevation={1}>
-            <CardHeader title="عدد الفيديوهات" />
-            <CardContent>
-              <Typography variant="h3" sx={{ mb: 1 }}>{stats.videos}</Typography>
-              <Button onClick={() => router.push('/admin/video')} variant="contained" size="small">عرض الفيديوهات</Button>
-            </CardContent>
-          </Card>
-          <Card elevation={1}>
-            <CardHeader title="عدد المسؤولين" />
-            <CardContent>
-              <Typography variant="h3" sx={{ mb: 1 }}>{stats.admins}</Typography>
-              <Button onClick={() => router.push('/users')} variant="contained" size="small">إدارة المسؤولين</Button>
-            </CardContent>
-          </Card>
-        </Box>
+          <CardContent>
+            <Typography variant="h3" sx={{ mb: 1 }}>{stats.teachers}</Typography>
+            <Button onClick={() => router.push('/admin/users')} variant="contained" size="small">إدارة المستخدمين</Button>
+          </CardContent>
+        </Card>
+        <Card elevation={1}>
+          <CardHeader title="عدد الطلاب" />
+          <CardContent>
+            <Typography variant="h3" sx={{ mb: 1 }}>{stats.students}</Typography>
+            <Button onClick={() => router.push('/admin/students')} variant="contained" size="small">عرض الطلاب</Button>
+          </CardContent>
+        </Card>
+        <Card elevation={1}>
+          <CardHeader title="عدد الامتحانات" />
+          <CardContent>
+            <Typography variant="h3" sx={{ mb: 1 }}>{stats.exams}</Typography>
+            <Button onClick={() => router.push('/admin/exam')} variant="contained" size="small">عرض الامتحانات</Button>
+          </CardContent>
+        </Card>
+        <Card elevation={1}>
+          <CardHeader title="عدد الفيديوهات" />
+          <CardContent>
+            <Typography variant="h3" sx={{ mb: 1 }}>{stats.videos}</Typography>
+            <Button onClick={() => router.push('/admin/video')} variant="contained" size="small">عرض الفيديوهات</Button>
+          </CardContent>
+        </Card>
+        <Card elevation={1}>
+          <CardHeader title="عدد المسؤولين" />
+          <CardContent>
+            <Typography variant="h3" sx={{ mb: 1 }}>{stats.admins}</Typography>
+            <Button onClick={() => router.push('/admin/users')} variant="contained" size="small">إدارة المسؤولين</Button>
+          </CardContent>
+        </Card>
+      </Box>
       </Stack>
       <Snackbar
         open={!!error}
@@ -116,4 +117,3 @@ export default function AdminDashboardPage() {
     </Container>
   );
 }
-
