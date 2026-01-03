@@ -11,7 +11,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Modal } from '@/components/ui/Modal';
 import { Form } from '@/components/ui/Form';
 import { Menu } from '@/components/ui/Menu';
-import Table, { type Column } from '@/components/ui/Table';
+import { Table } from '@/components/ui/Table';
 import { MoreVert } from '@mui/icons-material';
 import {
   createUser,
@@ -27,15 +27,6 @@ import {
 
 // نوع الدور المستخدم في الواجهة
 type UserKind = 'admin' | 'teacher';
-
-// نوع الصف المستخدم في الجدول
-type UserRow = {
-  id: number;
-  name: string;
-  kind: UserKind;
-  email: string;
-  createdAt: string;
-};
 
 // عنصر واجهة لإضافة مستخدم جديد (طالب/مسؤول/معلم)
 function AddUserForm({
@@ -243,7 +234,7 @@ function AddUserForm({
 // واجهة عرض/بحث/تصفية/ترتيب المستخدمين مع إجراءات CRUD
 function UsersTable() {
   // الحالة العامة
-  const [users, setUsers] = React.useState<UserRow[]>([]);
+  const [users, setUsers] = React.useState<Array<{ id: number; name: string; kind: UserKind; email: string; createdAt: string }>>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [roleFilter, setRoleFilter] = React.useState<UserKind | 'all'>('all');
@@ -298,7 +289,7 @@ function UsersTable() {
   }, [users, roleFilter, searchQuery, sortDirection]);
 
   // فتح قائمة الإجراءات
-  function openMenu(e: React.MouseEvent<HTMLButtonElement>, user: UserRow) {
+  function openMenu(e: React.MouseEvent<HTMLButtonElement>, user: { id: number; name: string; kind: UserKind }) {
     setMenuAnchor(e.currentTarget);
     setMenuUser(user);
   }
@@ -415,8 +406,8 @@ function UsersTable() {
         />
       </Stack>
 
-      {(() => {
-        const columns: Column<UserRow>[] = [
+      <Table
+        columns={[
           {
             id: 'name',
             label: 'الاسم',
@@ -429,45 +420,38 @@ function UsersTable() {
           {
             id: 'kind',
             label: 'الدور',
-            render: (u) => (u.kind === 'admin' ? 'مدير' : 'معلّم'),
+            render: (u: { id: number; name: string; kind: UserKind }) =>
+              u.kind === 'admin' ? 'مدير' : 'معلّم',
           },
           {
             id: 'createdAt',
             label: 'تاريخ التسجيل',
-            render: (u) =>
+            render: (u: { createdAt?: string }) =>
               u.createdAt ? new Date(u.createdAt).toLocaleString('ar-EG') : '-',
           },
           {
             id: 'actions',
             label: 'إجراءات',
             align: 'right',
-            render: (u) => (
-              <IconButton
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => openMenu(e, u)}
-                aria-label="الإجراءات"
-              >
-                <MoreVert />
-              </IconButton>
-            ),
-          },
-        ];
-        return (
-          <Table
-            columns={columns}
-            data={visibleUsers}
-            loading={loading}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            onSortChange={(col: string, dir: 'asc' | 'desc') => {
-              if (col === 'name') {
-                setSortBy('name');
-                setSortDirection(dir);
-              }
-            }}
-            getRowId={(u) => `${u.kind}-${u.id}`}
-          />
-        );
-      })()}
+            render: (u: { id: number; name: string; kind: UserKind }) => (
+            <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => openMenu(e, u)} aria-label="الإجراءات">
+              <MoreVert />
+            </IconButton>
+          ),
+        },
+      ]}
+      data={visibleUsers}
+      loading={loading}
+      sortBy={sortBy}
+      sortDirection={sortDirection}
+      onSortChange={(col: string, dir: 'asc' | 'desc') => {
+        if (col === 'name') {
+          setSortBy('name');
+          setSortDirection(dir);
+        }
+      }}
+      getRowId={(u: { id: number; name: string; kind: UserKind }) => `${u.kind}-${u.id}`}
+    />
 
       <Menu
         anchorEl={menuAnchor}
