@@ -210,6 +210,17 @@ CREATE TABLE teacher_accounting_settings (
         ON DELETE CASCADE
 );
 
-ملاحظات:
-- يسمح هذا الجدول بتخصيص قيمة التحصيل لكل أستاذ بشكل منفصل.
-- في حال عدم وجود سجل للأستاذ، تُستخدم القيمة الافتراضية 0.
+213→ملاحظات:
+214→- يسمح هذا الجدول بتخصيص قيمة التحصيل لكل أستاذ بشكل منفصل.
+215→- في حال عدم وجود سجل للأستاذ، تُستخدم القيمة الافتراضية 0.
+216→
+217→14️⃣ جدول ACCESS_LOGS (تسجيل محاولات الوصول)
+218→CREATE TABLE access_logs (
+219→    id BIGSERIAL PRIMARY KEY,
+220→    auth_user_id UUID,
+221→    role VARCHAR(20) NOT NULL DEFAULT 'anonymous',
+222→    path TEXT NOT NULL,
+223→    method VARCHAR(10) NOT NULL,
+224→    outcome VARCHAR(20) NOT NULL, -- allowed | redirected | denied
+225→    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+226→);

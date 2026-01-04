@@ -39,7 +39,7 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      router.push("/admin");
+      router.push("/");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "خطأ في البريد الإلكتروني أو كلمة المرور");
     } finally {

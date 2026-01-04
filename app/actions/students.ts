@@ -266,6 +266,322 @@ export async function countStudents(input?: {
   }
 }
 
+export type StudentProfile = {
+  id: number;
+  auth_user_id: string;
+  name: string;
+  national_id: string;
+  status: string;
+  show_exams: boolean;
+  teacher_id: number;
+  created_at: string;
+  last_login_at: string | null;
+};
+
+export type ExamListItem = {
+  id: number;
+  title: string;
+  language: string;
+  duration_minutes: number;
+};
+
+export type SessionListItem = {
+  id: number;
+  title: string;
+  video_url: string;
+  language: string;
+  order_number: number | null;
+};
+
+export type ExamResultItem = {
+  exam_id: number;
+  score: number;
+  duration_minutes: number | null;
+  taken_at: string;
+  exam_title?: string;
+};
+
+export type StudentProgressOverview = {
+  totalStudyMinutes: number;
+  examsTaken: number;
+  lastScore: number | null;
+  expectedScore: number | null;
+};
+
+export async function getStudentProfile(
+  studentId: number,
+): Promise<{ ok: true; profile: StudentProfile } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('students')
+      .select('id,auth_user_id,name,national_id,status,show_exams,teacher_id,created_at,last_login_at')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    if (!data) {
+      return { ok: false, error: 'الطالب غير موجود' };
+    }
+    const r = (data as unknown) as Record<string, unknown>;
+    const profile: StudentProfile = {
+      id: r.id as number,
+      auth_user_id: r.auth_user_id as string,
+      name: r.name as string,
+      national_id: r.national_id as string,
+      status: (r.status as string | undefined) ?? 'active',
+      show_exams: (r.show_exams as boolean | undefined) ?? true,
+      teacher_id: r.teacher_id as number,
+      created_at: r.created_at as string,
+      last_login_at: (r.last_login_at as string | null) ?? null,
+    };
+    return { ok: true, profile };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function listStudentAvailableExams(
+  studentId: number,
+): Promise<{ ok: true; exams: ExamListItem[] } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const { data: srow, error: sErr } = await supabase
+      .from('students')
+      .select('show_exams,status')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (sErr) {
+      return { ok: false, error: sErr.message, details: sErr };
+    }
+    const sInfo = (srow as unknown) as Record<string, unknown> | null;
+    if (!sInfo || (sInfo.status as string | undefined) !== 'active') {
+      return { ok: false, error: 'حساب الطالب غير نشط' };
+    }
+    const show = ((sInfo as Record<string, unknown>).show_exams as boolean | undefined) === true;
+    if (!show) {
+      return { ok: true, exams: [] };
+    }
+    const { data, error } = await supabase
+      .from('exams')
+      .select('id,title,language,duration_minutes')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    const exams: ExamListItem[] = (data ?? []).map((row) => {
+      const r = (row as unknown) as Record<string, unknown>;
+      return {
+        id: r.id as number,
+        title: r.title as string,
+        language: r.language as string,
+        duration_minutes: r.duration_minutes as number,
+      };
+    });
+    return { ok: true, exams };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function listStudentActiveSessions(
+  studentId: number,
+): Promise<{ ok: true; sessions: SessionListItem[] } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const { data: srow, error: sErr } = await supabase
+      .from('students')
+      .select('status')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (sErr) {
+      return { ok: false, error: sErr.message, details: sErr };
+    }
+    const sInfo = (srow as unknown) as Record<string, unknown> | null;
+    if (!sInfo || (sInfo.status as string | undefined) !== 'active') {
+      return { ok: false, error: 'حساب الطالب غير نشط' };
+    }
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('id,title,video_url,language,order_number')
+      .eq('is_active', true)
+      .order('order_number', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true });
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    const sessions: SessionListItem[] = (data ?? []).map((row) => {
+      const r = (row as unknown) as Record<string, unknown>;
+      return {
+        id: r.id as number,
+        title: r.title as string,
+        video_url: r.video_url as string,
+        language: r.language as string,
+        order_number: (r.order_number as number | null) ?? null,
+      };
+    });
+    return { ok: true, sessions };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function listStudentExamResults(
+  studentId: number,
+): Promise<{ ok: true; results: ExamResultItem[] } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('exam_results')
+      .select('exam_id,score,duration_minutes,taken_at')
+      .eq('student_id', studentId)
+      .order('taken_at', { ascending: false });
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    const base: ExamResultItem[] = (data ?? []).map((row) => {
+      const r = (row as unknown) as Record<string, unknown>;
+      return {
+        exam_id: r.exam_id as number,
+        score: Math.max(0, Math.min(100, Math.round(Number(r.score)))),
+        duration_minutes: (r.duration_minutes as number | null) ?? null,
+        taken_at: r.taken_at as string,
+      };
+    });
+    const ids = Array.from(new Set(base.map((b) => b.exam_id)));
+    if (ids.length > 0) {
+      const { data: examsRows, error: exErr } = await supabase
+        .from('exams')
+        .select('id,title')
+        .in('id', ids);
+      if (!exErr) {
+        const titleById = new Map<number, string>();
+        for (const e of examsRows ?? []) {
+          const er = (e as unknown) as Record<string, unknown>;
+          titleById.set(er.id as number, er.title as string);
+        }
+        for (const r of base) r.exam_title = titleById.get(r.exam_id);
+      }
+    }
+    return { ok: true, results: base };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function getStudentProgressOverview(
+  studentId: number,
+): Promise<{ ok: true; progress: StudentProgressOverview } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const [ses, res] = await Promise.all([
+      supabase.from('student_sessions').select('duration_minutes').eq('student_id', studentId),
+      supabase
+        .from('exam_results')
+        .select('score,taken_at')
+        .eq('student_id', studentId)
+        .order('taken_at', { ascending: false }),
+    ]);
+    if (ses.error) {
+      return { ok: false, error: ses.error.message, details: ses.error };
+    }
+    if (res.error) {
+      return { ok: false, error: res.error.message, details: res.error };
+    }
+    let total = 0;
+    for (const s of ses.data ?? []) {
+      const sr = (s as unknown) as Record<string, unknown>;
+      const n = Number(sr.duration_minutes);
+      total += Number.isFinite(n) ? n : 0;
+    }
+    const scores: Array<number | null> = [];
+    for (const row of res.data ?? []) {
+      const rr = (row as unknown) as Record<string, unknown>;
+      const n = Number(rr.score);
+      scores.push(Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : null);
+    }
+    const clean = scores.filter((v): v is number => typeof v === 'number');
+    const last = clean.length > 0 ? clean[0] : null;
+    const expected = clean.length > 0 ? Math.round(clean.reduce((a, b) => a + b, 0) / clean.length) : null;
+    return {
+      ok: true,
+      progress: {
+        totalStudyMinutes: total,
+        examsTaken: clean.length,
+        lastScore: last,
+        expectedScore: expected,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function getStudentPortalData(
+  studentId: number,
+): Promise<
+  | {
+      ok: true;
+      profile: StudentProfile;
+      exams: ExamListItem[];
+      sessions: SessionListItem[];
+      progress: StudentProgressOverview;
+      results: ExamResultItem[];
+    }
+  | { ok: false; error: string; details?: unknown }
+> {
+  try {
+    const [profileRes, examsRes, sessionsRes, progressRes, resultsRes] = await Promise.all([
+      getStudentProfile(studentId),
+      listStudentAvailableExams(studentId),
+      listStudentActiveSessions(studentId),
+      getStudentProgressOverview(studentId),
+      listStudentExamResults(studentId),
+    ]);
+    if (!profileRes.ok) return profileRes;
+    if (!examsRes.ok) return examsRes;
+    if (!sessionsRes.ok) return sessionsRes;
+    if (!progressRes.ok) return progressRes;
+    if (!resultsRes.ok) return resultsRes;
+    return {
+      ok: true,
+      profile: profileRes.profile,
+      exams: examsRes.exams,
+      sessions: sessionsRes.sessions,
+      progress: progressRes.progress,
+      results: resultsRes.results,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
 export async function setStudentStatus(
   studentId: number,
   status: string,
