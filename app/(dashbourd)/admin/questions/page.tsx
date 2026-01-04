@@ -174,10 +174,17 @@ export default function AdminQuestionsManualPage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h5">إضافة أسئلة إلى امتحان موجود</Typography>
-        <Chip label="exam_questions" />
+    <Container maxWidth="lg" sx={{ py: 3 }} dir="rtl">
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>
+            إدارة أسئلة الامتحانات
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'var(--neutral-700)', mt: 0.5 }}>
+            اختيار الامتحان وإضافة أسئلة جديدة يدويًا
+          </Typography>
+        </Box>
+        <Chip label="exam_questions" sx={{ bgcolor: 'var(--neutral-200)', fontWeight: 600 }} />
       </Stack>
 
       {error && (
@@ -201,6 +208,7 @@ export default function AdminQuestionsManualPage() {
                 <Input
                   label="تصفية اللغة"
                   select
+                  aria-label="تصفية لغة الامتحانات"
                   value={languageFilter}
                   onChange={(e) => setLanguageFilter(e.target.value as 'all' | Lang)}
                   fullWidth
@@ -214,6 +222,7 @@ export default function AdminQuestionsManualPage() {
                 <Input
                   label="اختر الامتحان"
                   select
+                  aria-label="اختيار الامتحان"
                   value={selectedExamId}
                   onChange={(e) =>
                     setSelectedExamId(e.target.value === '' ? '' : Number(e.target.value))
@@ -252,11 +261,12 @@ export default function AdminQuestionsManualPage() {
                     render: (row: UIQuestion) => {
                       const idx = questions.indexOf(row);
                       return (
-                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1 }}>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1, p: 1 }}>
                           <Input
                             label="نص السؤال"
                             multiline
                             minRows={4}
+                            aria-label="نص السؤال"
                             value={row.question}
                             onChange={(e) => idx >= 0 && updateQuestion(idx, 'question', e.target.value)}
                           />
@@ -264,6 +274,7 @@ export default function AdminQuestionsManualPage() {
                             label="A"
                             multiline
                             minRows={2}
+                            aria-label="الخيار A"
                             value={row.option_a}
                             onChange={(e) => idx >= 0 && updateQuestion(idx, 'option_a', e.target.value)}
                           />
@@ -271,6 +282,7 @@ export default function AdminQuestionsManualPage() {
                             label="B"
                             multiline
                             minRows={2}
+                            aria-label="الخيار B"
                             value={row.option_b}
                             onChange={(e) => idx >= 0 && updateQuestion(idx, 'option_b', e.target.value)}
                           />
@@ -278,6 +290,7 @@ export default function AdminQuestionsManualPage() {
                             label="C"
                             multiline
                             minRows={2}
+                            aria-label="الخيار C"
                             value={row.option_c}
                             onChange={(e) => idx >= 0 && updateQuestion(idx, 'option_c', e.target.value)}
                           />
@@ -285,12 +298,14 @@ export default function AdminQuestionsManualPage() {
                             label="D"
                             multiline
                             minRows={2}
+                            aria-label="الخيار D"
                             value={row.option_d}
                             onChange={(e) => idx >= 0 && updateQuestion(idx, 'option_d', e.target.value)}
                           />
                           <Input
                             label="الخيار الصحيح"
                             select
+                            aria-label="الخيار الصحيح"
                             value={row.correct_option ?? ''}
                             onChange={(e) => idx >= 0 && updateQuestion(idx, 'correct_option', e.target.value as Correct)}
                           >
@@ -303,6 +318,7 @@ export default function AdminQuestionsManualPage() {
                             <input
                               type="file"
                               accept="image/*"
+                              aria-label="صورة السؤال (اختياري)"
                               onChange={(ev) => {
                                 const f = ev.currentTarget.files && ev.currentTarget.files[0] ? ev.currentTarget.files[0] : null;
                                 if (idx >= 0) handleFileChange(idx, f);

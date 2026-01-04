@@ -21,7 +21,7 @@ export type Column<T> = {
   render?: (row: T) => React.ReactNode;
 };
 
-export type DataTableProps<T> = Omit<MUITableProps, 'children'> & {
+export type DataTableProps<T extends Record<string, unknown>> = Omit<MUITableProps, 'children'> & {
   columns: Column<T>[];
   data: T[];
   loading?: boolean;
@@ -32,7 +32,7 @@ export type DataTableProps<T> = Omit<MUITableProps, 'children'> & {
   getRowId?: (row: T, index: number) => React.Key;
 };
 
-export function Table<T>({
+export function Table<T extends Record<string, unknown>>({
   columns,
   data,
   loading,
@@ -50,12 +50,25 @@ export function Table<T>({
   }
 
   return (
-    <TableContainer component={Paper}>
-      <MUITable {...rest}>
-        <TableHead>
-          <TableRow>
+    <TableContainer
+      component={Paper}
+      sx={{
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 10px 30px var(--black-03)',
+        border: '1px solid var(--neutral-300)',
+        bgcolor: 'var(--brand-white)'
+      }}
+    >
+      <MUITable size="small" {...rest}>
+        <TableHead sx={{ bgcolor: 'var(--brand-white)' }}>
+          <TableRow sx={{ borderBottom: '1px solid var(--neutral-200)' }}>
             {columns.map((col) => (
-              <TableCell key={col.id} align={col.align}>
+              <TableCell
+                key={col.id}
+                align={col.align}
+                sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}
+              >
                 {col.sortable ? (
                   <TableSortLabel
                     active={sortBy === col.id}
@@ -84,16 +97,25 @@ export function Table<T>({
             data.map((row, idx) => {
               const key = getRowId ? getRowId(row, idx) : idx;
               return (
-                <TableRow key={key} hover>
-                  {columns.map((col) => (
-                    <TableCell key={col.id} align={col.align}>
-                      {col.render
-                        ? col.render(row)
-                        : (row as any)[col.id] !== undefined
-                        ? (row as any)[col.id]
-                        : null}
-                    </TableCell>
-                  ))}
+                <TableRow
+                  key={key}
+                  hover
+                  sx={{
+                    '&:hover': { bgcolor: 'var(--neutral-100)' }
+                  }}
+                >
+                  {columns.map((col) => {
+                    const cell = row[col.id];
+                    return (
+                      <TableCell key={col.id} align={col.align} sx={{ color: 'var(--brand-dark)' }}>
+                        {col.render
+                          ? col.render(row)
+                          : cell !== undefined
+                          ? (cell as React.ReactNode)
+                          : null}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               );
             })

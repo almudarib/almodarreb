@@ -11,8 +11,16 @@ import { Typography, type TypographyProps } from '@mui/material';
 
 export type CardProps = MUICardProps;
 
-export function Card(props: CardProps) {
-  return <MUICard {...props} />;
+export function Card({ sx, ...rest }: CardProps) {
+  const defaultSx = {
+    borderRadius: '16px',
+    overflow: 'hidden',
+    boxShadow: '0 10px 30px var(--black-03)',
+    border: '1px solid var(--neutral-300)',
+    bgcolor: 'var(--brand-white)'
+  } as const;
+  const mergedSx = sx ? [defaultSx, ...(Array.isArray(sx) ? sx : [sx])] : defaultSx;
+  return <MUICard sx={mergedSx} {...rest} />;
 }
 
 export { CardContent, CardHeader, CardActions };

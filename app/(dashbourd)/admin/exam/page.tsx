@@ -210,27 +210,39 @@ function ExamsTable() {
             {error}
           </Alert>
         )}
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-          <Input
-            placeholder="البحث"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{ startAdornment: <Search fontSize="small" /> }}
-            size="small"
-          />
-          <Input
-            label="اللغة"
-            select
-            value={languageFilter}
-            onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'AR' | 'EN')}
-            size="small"
-            sx={{ minWidth: 140 }}
-          >
-            <MenuItem value="all">الكل</MenuItem>
-            <MenuItem value="AR">AR</MenuItem>
-            <MenuItem value="EN">EN</MenuItem>
-          </Input>
-        </Stack>
+        <Box
+          sx={{
+            p: 2,
+            border: '1px solid var(--neutral-200)',
+            borderRadius: '12px',
+            bgcolor: 'var(--brand-white)',
+            mb: 2
+          }}
+        >
+          <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+            <Input
+              placeholder="ابحث بعنوان الامتحان"
+              aria-label="حقل البحث عن الامتحان"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{ startAdornment: <Search fontSize="small" /> }}
+              size="small"
+            />
+            <Input
+              label="اللغة"
+              select
+              aria-label="تصفية اللغة"
+              value={languageFilter}
+              onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'AR' | 'EN')}
+              size="small"
+              sx={{ minWidth: 140 }}
+            >
+              <MenuItem value="all">الكل</MenuItem>
+              <MenuItem value="AR">AR</MenuItem>
+              <MenuItem value="EN">EN</MenuItem>
+            </Input>
+          </Stack>
+        </Box>
 
         <Table
           columns={[
@@ -274,14 +286,25 @@ export default function AdminExamPage() {
   const [reloadKey, setReloadKey] = React.useState(0);
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h5">الامتحانات</Typography>
+    <Container maxWidth="lg" sx={{ py: 3 }} dir="rtl">
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>إدارة الامتحانات</Typography>
+          <Typography variant="body2" sx={{ color: 'var(--neutral-700)', mt: 0.5 }}>
+            إضافة، بحث، وتصفية الامتحانات حسب اللغة والحالة
+          </Typography>
+        </Box>
         <Button variant="contained" onClick={() => setAddOpen(true)}>
           إضافة امتحان
         </Button>
       </Stack>
-      <ExamsTable key={reloadKey} />
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ p: 0 }}>
+          <Box sx={{ p: 2 }}>
+            <ExamsTable key={reloadKey} />
+          </Box>
+        </CardContent>
+      </Card>
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}

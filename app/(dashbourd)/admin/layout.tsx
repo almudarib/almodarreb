@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography, List, ListItemButton, ListItemText, Divider } from '@mui/material';
+import { LogoutButton } from '@/components/logout-button';
 
 // لوحة الألوان المستخرجة من الهوية
 const PALETTE = {
@@ -105,18 +106,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Footer أو معلومات إضافية أسفل القائمة */}
           <Box sx={{ mt: 'auto', p: 3, textAlign: 'center' }}>
-            <Box 
-              sx={{ 
-                p: 2, 
-                borderRadius: '12px', 
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px dashed rgba(255,255,255,0.1)' 
-              }}
-            >
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                الإصدار 2.0.1
-              </Typography>
-            </Box>
+            <Stack spacing={2}>
+              <Box 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: '12px', 
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px dashed rgba(255,255,255,0.1)' 
+                }}
+              >
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                  الإصدار 2.0.1
+                </Typography>
+              </Box>
+              <LogoutButton label="تسجيل الخروج" variant="outlined" size="small" />
+            </Stack>
           </Box>
         </Stack>
       </Box>

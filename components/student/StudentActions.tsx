@@ -1,12 +1,8 @@
 'use client';
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from '@mui/material';
+import { Menu } from '@/components/ui/Menu';
+import { Stack, Typography } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -59,49 +55,67 @@ export function StudentActions({ student, onOpenDetails }: StudentActionsProps) 
 
   return (
     <>
-      <Button variant="contained" color="secondary" onClick={handleOpen}>
+      <Button variant="contained" color="secondary" onClick={handleOpen} aria-label="خيارات الطالب">
         إجراء
       </Button>
-      <Menu anchorEl={anchorEl} open={open} onClose={handleClose} dir="rtl">
-        <MenuItem
-          onClick={() => {
-            handleClose();
-            onOpenDetails(student);
-          }}
-        >
-          <ListItemIcon>
-            <InfoOutlinedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>تفاصيل</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleDeleteDevices}>
-          <ListItemIcon>
-            <DeleteOutlineIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>حذف الأجهزة</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handlePass}>
-          <ListItemIcon>
-            <CheckCircleOutlineIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>نجاح</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleFail}>
-          <ListItemIcon>
-            <CancelOutlinedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>رسوب</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={handleEdit}>
-          <ListItemIcon>
-            <EditOutlinedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>تحرير</ListItemText>
-        </MenuItem>
-      </Menu>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        items={[
+          {
+            label: (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <InfoOutlinedIcon fontSize="small" />
+                <Typography>تفاصيل</Typography>
+              </Stack>
+            ),
+            onClick: () => {
+              handleClose();
+              onOpenDetails(student);
+            },
+          },
+          {
+            label: (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <DeleteOutlineIcon fontSize="small" />
+                <Typography>حذف الأجهزة</Typography>
+              </Stack>
+            ),
+            onClick: handleDeleteDevices,
+            tone: 'error',
+          },
+          {
+            label: (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CheckCircleOutlineIcon fontSize="small" />
+                <Typography>نجاح</Typography>
+              </Stack>
+            ),
+            onClick: handlePass,
+          },
+          {
+            label: (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CancelOutlinedIcon fontSize="small" />
+                <Typography>رسوب</Typography>
+              </Stack>
+            ),
+            onClick: handleFail,
+          },
+          {
+            label: (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <EditOutlinedIcon fontSize="small" />
+                <Typography>تحرير</Typography>
+              </Stack>
+            ),
+            onClick: handleEdit,
+          },
+        ]}
+      />
     </>
   );
 }
 
 export default StudentActions;
-

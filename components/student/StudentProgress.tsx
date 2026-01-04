@@ -14,8 +14,21 @@ export function StudentProgress({ data }: StudentProgressProps) {
   return (
     <Box dir="rtl">
       <Stack spacing={1}>
-        <Typography variant="subtitle1">تقدم الطالب</Typography>
-        <LinearProgress variant="determinate" value={percent} />
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}>تقدم الطالب</Typography>
+        <LinearProgress
+          variant="determinate"
+          value={percent}
+          aria-label="مؤشر تقدم الطالب"
+          sx={{
+            height: 8,
+            borderRadius: '12px',
+            bgcolor: 'var(--neutral-200)',
+            '& .MuiLinearProgress-bar': {
+              bgcolor: 'var(--brand-teal)',
+              borderRadius: '12px'
+            }
+          }}
+        />
         <Stack direction="row" spacing={2} justifyContent="space-between">
           <Typography variant="body2">النتيجة الأخيرة: {data?.lastScore ?? '--'}</Typography>
           <Typography variant="body2">الدراسة: {data?.totalStudyMinutes ?? 0} دقيقة</Typography>

@@ -1,9 +1,10 @@
 'use client';
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Stack, Typography, Pagination, TextField, MenuItem } from '@mui/material';
+import { Box, Stack, Typography, Pagination, MenuItem } from '@mui/material';
 import Table, { type Column } from '@/components/ui/Table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import type { StudentRecord } from '@/app/actions/students';
 import StudentActions from '@/components/student/StudentActions';
 import StudentDetailsModal from '@/components/student/StudentDetailsModal';
@@ -164,13 +165,21 @@ export function StudentTable({
       >
       <Stack spacing={2}>
         <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-          <Typography variant="h5">الطلاب</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}>الطلاب</Typography>
           <Button variant="contained" onClick={() => setAddOpen(true)}>
             طالب جديد
           </Button>
         </Stack>
-        <Stack direction="row" spacing={2}>
-          <TextField
+        <Box
+          sx={{
+            p: 2,
+            border: '1px solid var(--neutral-200)',
+            borderRadius: '12px',
+            bgcolor: 'var(--brand-white)'
+          }}
+        >
+        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+          <Input
             fullWidth
             placeholder="ابحث بالاسم أو رقم الهوية أو الأستاذ المشرف"
             value={search}
@@ -182,7 +191,7 @@ export function StudentTable({
           <Button variant="outlined" onClick={doSearch}>
             بحث
           </Button>
-          <TextField
+          <Input
             select
             label="الحالة"
             value={status ?? ''}
@@ -195,8 +204,8 @@ export function StudentTable({
             <MenuItem value="failed">راسب</MenuItem>
             <MenuItem value="active">نشط</MenuItem>
             <MenuItem value="inactive">غير نشط</MenuItem>
-          </TextField>
-          <TextField
+          </Input>
+          <Input
             label="تاريخ الامتحان من"
             type="date"
             value={examFrom}
@@ -204,7 +213,7 @@ export function StudentTable({
             sx={{ minWidth: 180 }}
             InputLabelProps={{ shrink: true }}
           />
-          <TextField
+          <Input
             label="تاريخ الامتحان إلى"
             type="date"
             value={examTo}
@@ -212,7 +221,7 @@ export function StudentTable({
             sx={{ minWidth: 180 }}
             InputLabelProps={{ shrink: true }}
           />
-          <TextField
+          <Input
             select
             label="إظهار الاختبارات"
             value={
@@ -227,11 +236,12 @@ export function StudentTable({
             <MenuItem value=""></MenuItem>
             <MenuItem value="true">ظاهر</MenuItem>
             <MenuItem value="false">مخفي</MenuItem>
-          </TextField>
+          </Input>
           <Button variant="outlined" onClick={applyFilters}>
             تطبيق الفلاتر
           </Button>
         </Stack>
+        </Box>
 
         <Table
           columns={columns}

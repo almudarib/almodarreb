@@ -2,6 +2,8 @@ import { listStudents } from '@/app/actions/students';
 import { createAdminClient } from '@/lib/supabase/admin';
 import StudentTable, { type StudentWithTeacher } from '@/components/student/StudentTable';
 import { Suspense } from 'react';
+import { Container, Stack, Typography, Alert, Box } from '@mui/material';
+import { Card, CardContent } from '@/components/ui';
 
 async function StudentsContent({
   searchParams,
@@ -63,10 +65,11 @@ async function StudentsContent({
   const res = await listStudents(q);
   if (!res.ok) {
     return (
-      <div dir="rtl" style={{ padding: 24 }}>
-        <h2>فشل تحميل الطلاب</h2>
-        <p>{res.error}</p>
-      </div>
+      <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
+        <Alert severity="error" sx={{ borderRadius: '12px' }}>
+          {res.error}
+        </Alert>
+      </Container>
     );
   }
 
@@ -93,17 +96,31 @@ async function StudentsContent({
   }));
 
   return (
-    <div dir="rtl" style={{ padding: 16 }}>
-      <StudentTable
-        students={withTeacher}
-        page={res.page}
-        perPage={res.perPage}
-        total={res.total}
-        sortBy={q.sort_by ?? 'created_at'}
-        sortDir={q.sort_dir ?? 'desc'}
-        initialSearch={q.search}
-      />
-    </div>
+    <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>إدارة الطلاب</Typography>
+          <Typography variant="body2" sx={{ color: 'var(--neutral-700)', mt: 0.5 }}>
+            عرض، بحث، وتصفية سجلات الطلاب
+          </Typography>
+        </Box>
+      </Stack>
+      <Card>
+        <CardContent sx={{ p: 0 }}>
+          <Box sx={{ p: 2 }}>
+            <StudentTable
+              students={withTeacher}
+              page={res.page}
+              perPage={res.perPage}
+              total={res.total}
+              sortBy={q.sort_by ?? 'created_at'}
+              sortDir={q.sort_dir ?? 'desc'}
+              initialSearch={q.search}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+    </Container>
   );
 }
 
@@ -113,7 +130,17 @@ export default function Page({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   return (
-    <Suspense fallback={<div dir="rtl" style={{ padding: 24 }}>جارٍ التحميل...</div>}>
+    <Suspense
+      fallback={
+        <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
+          <Card>
+            <CardContent>
+              <Typography>جارٍ التحميل...</Typography>
+            </CardContent>
+          </Card>
+        </Container>
+      }
+    >
       <StudentsContent searchParams={searchParams} />
     </Suspense>
   );

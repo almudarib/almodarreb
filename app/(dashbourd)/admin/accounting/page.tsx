@@ -203,14 +203,21 @@
      }
    }
  
-   return (
-     <Container maxWidth="lg" sx={{ py: 4 }}>
-       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-         <Typography variant="h5">الحسابات بين الأساتذة والمدير</Typography>
-         <Button variant="contained" onClick={() => setInitOpen(true)}>
-           تهيئة القيمة الافتراضية
-         </Button>
-       </Stack>
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>
+            الحسابات بين الأساتذة والمدير
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'var(--neutral-700)', mt: 0.5 }}>
+            عرض الإجماليات وتطبيق المدفوعات وإدارة الرسوم الافتراضية
+          </Typography>
+        </Box>
+        <Button variant="contained" onClick={() => setInitOpen(true)}>
+          تهيئة القيمة الافتراضية
+        </Button>
+      </Stack>
 
        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} mb={2}>
          <Card elevation={1} sx={{ flex: 1 }}>
@@ -242,25 +249,26 @@
          </Card>
        </Stack>
 
-       <Card>
-         <CardHeader>
-           <Typography>جدول الحسابات</Typography>
-         </CardHeader>
-         <CardContent>
-          <Table<TeacherAccountingStats> columns={columns} data={stats} loading={loading} />
-         </CardContent>
-       </Card>
+      <Card>
+        <CardHeader title="جدول الحسابات" />
+        <CardContent sx={{ p: 0 }}>
+          <Box sx={{ p: 2 }}>
+            <Table<TeacherAccountingStats> columns={columns} data={stats} loading={loading} />
+          </Box>
+        </CardContent>
+      </Card>
  
-       <Modal title="تهيئة القيمة الافتراضية" open={initOpen} onCancel={() => setInitOpen(false)} onSubmit={handleInitDefault}>
-         <Stack spacing={2}>
-           <Input
-             type="number"
-             label="القيمة لكل طالب (USD)"
-             value={initFee}
-             onChange={(e) => setInitFee((e.target as HTMLInputElement).value)}
-           />
-         </Stack>
-       </Modal>
+      <Modal title="تهيئة القيمة الافتراضية" open={initOpen} onCancel={() => setInitOpen(false)} onSubmit={handleInitDefault}>
+        <Stack spacing={2}>
+          <Input
+            type="number"
+            label="القيمة لكل طالب (USD)"
+            value={initFee}
+            onChange={(e) => setInitFee((e.target as HTMLInputElement).value)}
+            inputProps={{ 'aria-label': 'القيمة لكل طالب بالدولار' }}
+          />
+        </Stack>
+      </Modal>
  
        <Modal
          title={details ? `تفاصيل: ${details.teacher_name}` : 'تفاصيل الحساب'}
@@ -269,44 +277,45 @@
          onSubmit={handleApplyPayment}
          submitText="تطبيق الدفع"
        >
-         {details ? (
-           <Stack spacing={2}>
-             <Box>
-               <Typography variant="body1">إجمالي المطلوب: {formatCurrency(details.total_due)}</Typography>
-               <Typography variant="body2">عدد الطلاب: {details.students_count}</Typography>
-               <Typography variant="body2">
-                 القيمة الافتراضية لكل طالب: {details.per_student_fee !== null ? formatCurrency(details.per_student_fee) : 'غير محددة'}
-               </Typography>
-             </Box>
-             <Input
-               type="number"
-               label="المبلغ المدفوع"
-               value={paymentAmount}
-               onChange={(e) => setPaymentAmount((e.target as HTMLInputElement).value)}
-             />
-             <Card>
-               <CardHeader>
-                 <Typography>تفاصيل الطلاب</Typography>
-               </CardHeader>
-               <CardContent>
-                <Table<StudentAmount>
-                  columns={[
-                    { id: 'student_name', label: 'الطالب' },
-                    {
-                      id: 'pending_amount',
-                      label: 'المبلغ المطلوب',
-                      render: (row: StudentAmount) => formatCurrency(row.pending_amount),
-                    },
-                    { id: 'pending_entries', label: 'عدد السجلات' },
-                  ]}
-                  data={details.students}
-                />
-               </CardContent>
-             </Card>
-           </Stack>
-         ) : (
-           <Typography>جاري التحميل...</Typography>
-         )}
+        {details ? (
+          <Stack spacing={2}>
+            <Box>
+              <Typography variant="body1">إجمالي المطلوب: {formatCurrency(details.total_due)}</Typography>
+              <Typography variant="body2">عدد الطلاب: {details.students_count}</Typography>
+              <Typography variant="body2">
+                القيمة الافتراضية لكل طالب: {details.per_student_fee !== null ? formatCurrency(details.per_student_fee) : 'غير محددة'}
+              </Typography>
+            </Box>
+            <Input
+              type="number"
+              label="المبلغ المدفوع"
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount((e.target as HTMLInputElement).value)}
+              inputProps={{ 'aria-label': 'المبلغ المدفوع' }}
+            />
+            <Card>
+              <CardHeader title="تفاصيل الطلاب" />
+              <CardContent sx={{ p: 0 }}>
+                <Box sx={{ p: 2 }}>
+                  <Table<StudentAmount>
+                    columns={[
+                      { id: 'student_name', label: 'الطالب' },
+                      {
+                        id: 'pending_amount',
+                        label: 'المبلغ المطلوب',
+                        render: (row: StudentAmount) => formatCurrency(row.pending_amount),
+                      },
+                      { id: 'pending_entries', label: 'عدد السجلات' },
+                    ]}
+                    data={details.students}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Stack>
+        ) : (
+          <Typography>جاري التحميل...</Typography>
+        )}
        </Modal>
  
        <Snackbar

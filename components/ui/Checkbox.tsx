@@ -6,11 +6,17 @@ export type CheckboxProps = MUICheckboxProps & {
   label?: React.ReactNode;
 };
 
-export function Checkbox({ label, ...rest }: CheckboxProps) {
+export function Checkbox({ label, sx, ...rest }: CheckboxProps) {
+  const defaultSx = {
+    color: 'var(--brand-teal)',
+    '&.Mui-checked': { color: 'var(--brand-teal)' },
+    '&.MuiCheckbox-indeterminate': { color: 'var(--brand-teal)' }
+  } as const;
+  const mergedSx = sx ? [defaultSx, ...(Array.isArray(sx) ? sx : [sx])] : defaultSx;
   if (label) {
-    return <FormControlLabel control={<MUICheckbox {...rest} />} label={label} />;
+    return <FormControlLabel control={<MUICheckbox sx={mergedSx} {...rest} />} label={label} />;
   }
-  return <MUICheckbox {...rest} />;
+  return <MUICheckbox sx={mergedSx} {...rest} />;
 }
 
 export default Checkbox;

@@ -7,6 +7,11 @@ import StudentProgress from '@/components/student/StudentProgress';
 import type { StudentProgressData } from '@/app/actions/students';
 import type { StudentLoginEvent } from '@/app/actions/students';
 import { useRouter } from 'next/navigation';
+import { Box, Stack, Typography, Paper } from '@mui/material';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 export type StudentDetailsModalProps = {
   open: boolean;
@@ -115,163 +120,150 @@ export function StudentDetailsModal({
   }
 
   return (
-    !open ? null : (
-      <div className="fixed inset-0 z-50">
-        <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-        <div className="relative z-10 mx-auto my-8 w-full max-w-3xl px-4">
-          <div className="rounded-lg bg-white shadow-lg">
-            <div className="flex items-center justify-between border-b px-6 py-4">
-              <h2 className="text-lg font-semibold">بيانات الطالب</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50"
-                  onClick={() => setLoginOpen((v) => !v)}
-                >
-                  {loginOpen ? 'إخفاء التعقب' : 'تعقب تسجيلات الدخول'}
-                </button>
-                <button
-                  type="button"
-                  className="rounded-md px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-                  onClick={onClose}
-                >
-                  إغلاق
-                </button>
-              </div>
-            </div>
-            {!student ? null : (
-              <div className="px-6 py-4" dir="rtl">
-                <div className="space-y-6">
-                  <div className="text-sm">الأستاذ المشرف: {teacherName ?? '--'}</div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">اسم الطالب</label>
-                      <input
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        value={form.name ?? ''}
-                        onChange={(e) => setField('name', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">رقم الهوية</label>
-                      <input
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        inputMode="numeric"
-                        value={form.national_id ?? ''}
-                        onChange={(e) => setField('national_id', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">تاريخ الامتحان</label>
-                      <input
-                        type="datetime-local"
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        value={form.exam_datetime ? String(form.exam_datetime).slice(0, 16) : ''}
-                        onChange={(e) => setField('exam_datetime', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">تاريخ البدء</label>
-                      <input
-                        type="date"
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        value={form.start_date ?? ''}
-                        onChange={(e) => setField('start_date', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">تاريخ التسجيل</label>
-                      <input
-                        type="date"
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        value={form.registration_date ?? ''}
-                        onChange={(e) => setField('registration_date', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">آخر تسجيل دخول</label>
-                      <input
-                        type="datetime-local"
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        value={form.last_login_at ? String(form.last_login_at).slice(0, 16) : ''}
-                        onChange={(e) => setField('last_login_at', e.target.value)}
-                      />
-                    </div>
-                    <div className="md:col-span-1">
-                      <label className="mb-1 block text-sm font-medium">ملاحظة</label>
-                      <textarea
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        rows={3}
-                        value={form.notes ?? ''}
-                        onChange={(e) => setField('notes', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">الحالة</label>
-                      <input
-                        className="w-full rounded-md border px-3 py-2 text-sm bg-white"
-                        value={form.status ?? ''}
-                        onChange={(e) => setField('status', e.target.value)}
-                      />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        id="details_show_exams"
-                        type="checkbox"
-                        className="h-4 w-4 rounded border bg-white"
-                        checked={!!form.show_exams}
-                        onChange={(e) => setField('show_exams', e.target.checked)}
-                      />
-                      <label htmlFor="details_show_exams" className="text-sm">إظهار الاختبارات</label>
-                    </div>
-                  </div>
-                  {loginOpen ? (
-                    <div>
-                      <div className="mb-2 text-sm font-medium">سجل تسجيلات الدخول</div>
-                      {loginLoading ? (
-                        <div className="text-sm text-neutral-500">جاري التحميل...</div>
-                      ) : (
-                        <div className="max-h-64 overflow-y-auto rounded-md border bg-white">
-                          <ul className="divide-y">
-                            {loginHistory && loginHistory.length > 0 ? (
-                              loginHistory.map((ev, idx) => (
-                                <li key={idx} className="px-3 py-2 text-sm">
-                                  {new Date(ev.opened_at).toLocaleString('ar-EG')}
-                                </li>
-                              ))
-                            ) : (
-                              <li className="px-3 py-2 text-sm">لا توجد سجلات</li>
-                            )}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-                  <StudentProgress data={progress} />
-                </div>
-              </div>
-            )}
-            <div className="flex justify-end gap-2 border-t px-6 py-4">
-              <button
-                type="button"
-                className="rounded-md border px-4 py-2 text-sm"
-                onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="بيانات الطالب"
+      submitText={saving ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+      cancelText="إلغاء"
+      onSubmit={handleSubmit}
+      onCancel={onClose}
+      fullWidth
+      maxWidth="md"
+    >
+      {!student ? null : (
+        <Box dir="rtl">
+          <Stack spacing={2}>
+            <Typography variant="body2" sx={{ color: 'var(--neutral-700)' }}>
+              الأستاذ المشرف: {teacherName ?? '--'}
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2.5 }}>
+              <Box>
+                <Label>اسم الطالب</Label>
+                <Input
+                  value={form.name ?? ''}
+                  onChange={(e) => setField('name', e.target.value)}
+                  aria-label="اسم الطالب"
+                />
+              </Box>
+              <Box>
+                <Label>رقم الهوية</Label>
+                <Input
+                  inputMode="numeric"
+                  value={form.national_id ?? ''}
+                  onChange={(e) => setField('national_id', e.target.value)}
+                  aria-label="رقم الهوية"
+                />
+              </Box>
+              <Box>
+                <Label>تاريخ الامتحان</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.exam_datetime ? String(form.exam_datetime).slice(0, 16) : ''}
+                  onChange={(e) => setField('exam_datetime', e.target.value)}
+                  aria-label="تاريخ الامتحان"
+                />
+              </Box>
+              <Box>
+                <Label>تاريخ البدء</Label>
+                <Input
+                  type="date"
+                  value={form.start_date ?? ''}
+                  onChange={(e) => setField('start_date', e.target.value)}
+                  aria-label="تاريخ البدء"
+                />
+              </Box>
+              <Box>
+                <Label>تاريخ التسجيل</Label>
+                <Input
+                  type="date"
+                  value={form.registration_date ?? ''}
+                  onChange={(e) => setField('registration_date', e.target.value)}
+                  aria-label="تاريخ التسجيل"
+                />
+              </Box>
+              <Box>
+                <Label>آخر تسجيل دخول</Label>
+                <Input
+                  type="datetime-local"
+                  value={form.last_login_at ? String(form.last_login_at).slice(0, 16) : ''}
+                  onChange={(e) => setField('last_login_at', e.target.value)}
+                  aria-label="آخر تسجيل دخول"
+                />
+              </Box>
+              <Box sx={{ gridColumn: { md: '1 / -1' } }}>
+                <Label>ملاحظة</Label>
+                <Input
+                  multiline
+                  rows={3}
+                  value={form.notes ?? ''}
+                  onChange={(e) => setField('notes', e.target.value)}
+                  aria-label="ملاحظة"
+                />
+              </Box>
+              <Box>
+                <Label>الحالة</Label>
+                <Input
+                  value={form.status ?? ''}
+                  onChange={(e) => setField('status', e.target.value)}
+                  aria-label="الحالة"
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Checkbox
+                  checked={!!form.show_exams}
+                  onChange={(e) => setField('show_exams', e.target.checked)}
+                  inputProps={{ 'aria-label': 'إظهار الاختبارات' }}
+                  label="إظهار الاختبارات"
+                />
+              </Box>
+            </Box>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Input
+                value={loginOpen ? 'إخفاء التعقب' : 'تعقب تسجيلات الدخول'}
+                aria-label="زر التعقب"
+                onFocus={() => setLoginOpen((v) => !v)}
+                sx={{ display: 'none' }}
+              />
+              <Typography
+                role="button"
+                tabIndex={0}
+                onClick={() => setLoginOpen((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setLoginOpen((v) => !v); }}
+                sx={{ color: 'var(--brand-teal)', cursor: 'pointer', fontWeight: 600 }}
               >
-                إلغاء
-              </button>
-              <button
-                type="button"
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-60"
-                onClick={handleSubmit}
-                disabled={saving}
-              >
-                {saving ? 'جاري الحفظ...' : 'حفظ التعديلات'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+                {loginOpen ? 'إخفاء التعقب' : 'تعقب تسجيلات الدخول'}
+              </Typography>
+            </Stack>
+            {loginOpen ? (
+              <Paper variant="outlined" sx={{ p: 2, maxHeight: 256, overflowY: 'auto', borderRadius: '12px' }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700, color: 'var(--brand-dark)' }}>
+                  سجل تسجيلات الدخول
+                </Typography>
+                {loginLoading ? (
+                  <Typography variant="body2" sx={{ color: 'var(--neutral-600)' }}>جاري التحميل...</Typography>
+                ) : (
+                  <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+                    {loginHistory && loginHistory.length > 0 ? (
+                      loginHistory.map((ev, idx) => (
+                        <Box key={idx} component="li" sx={{ borderTop: idx ? '1px solid var(--neutral-200)' : 'none', py: 1 }}>
+                          <Typography variant="body2">{new Date(ev.opened_at).toLocaleString('ar-EG')}</Typography>
+                        </Box>
+                      ))
+                    ) : (
+                      <Box component="li" sx={{ py: 1 }}>
+                        <Typography variant="body2">لا توجد سجلات</Typography>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Paper>
+            ) : null}
+            <StudentProgress data={progress} />
+          </Stack>
+        </Box>
+      )}
+    </Modal>
   );
 }
 

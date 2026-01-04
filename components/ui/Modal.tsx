@@ -1,7 +1,8 @@
 'use client';
 import * as React from 'react';
-import { Box, Stack, Button } from '@mui/material';
+import { Box, Stack } from '@mui/material';
 import { Dialog, type DialogProps } from './Dialog';
+import { Button } from './button';
 
 export type ModalProps = Omit<DialogProps, 'actions'> & {
   submitText?: React.ReactNode;
@@ -21,7 +22,9 @@ export function Modal({
 }: ModalProps) {
   const actions = (
     <Stack direction="row" spacing={1}>
-      <Button onClick={onCancel}>{cancelText}</Button>
+      <Button variant="outlined" onClick={onCancel}>
+        {cancelText}
+      </Button>
       <Button variant="contained" onClick={onSubmit}>
         {submitText}
       </Button>
