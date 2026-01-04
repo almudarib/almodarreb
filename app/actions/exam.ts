@@ -411,6 +411,53 @@ export async function deleteExamQuestion(
   }
 }
 
+export async function countExams(input?: {
+  created_from?: string;
+  created_to?: string;
+}): Promise<{ ok: true; total: number } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    let builder = supabase.from('exams').select('id', { count: 'exact' });
+    if (input?.created_from) builder = builder.gte('created_at', input.created_from);
+    if (input?.created_to) {
+      const d = new Date(String(input.created_to).replace('+00:00', 'Z'));
+      d.setUTCHours(23, 59, 59, 999);
+      const toIso = d.toISOString().replace('Z', '+00:00');
+      builder = builder.lte('created_at', toIso);
+    }
+    const { error, count } = await builder;
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    return { ok: true, total: count ?? 0 };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function countQuestions(): Promise<
+  { ok: true; total: number } | { ok: false; error: string; details?: unknown }
+> {
+  try {
+    const supabase = createAdminClient();
+    const { error, count } = await supabase.from('exam_questions').select('id', { count: 'exact' });
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    return { ok: true, total: count ?? 0 };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
 export async function listExamQuestions(
   examId: number,
 ): Promise<{ ok: true; questions: QuestionRecord[] } | { ok: false; error: string; details?: unknown }> {

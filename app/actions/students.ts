@@ -238,6 +238,34 @@ export async function deleteStudentDevices(
   }
 }
 
+export async function countStudents(input?: {
+  registration_from?: string;
+  registration_to?: string;
+}): Promise<{ ok: true; total: number } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    let builder = supabase.from('students').select('id', { count: 'exact' });
+    if (input?.registration_from) builder = builder.gte('registration_date', input.registration_from);
+    if (input?.registration_to) {
+      const d = new Date(String(input.registration_to).replace('+00:00', 'Z'));
+      d.setUTCHours(23, 59, 59, 999);
+      const toIso = d.toISOString().replace('Z', '+00:00');
+      builder = builder.lte('registration_date', toIso);
+    }
+    const { error, count } = await builder;
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    return { ok: true, total: count ?? 0 };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
 export async function setStudentStatus(
   studentId: number,
   status: string,

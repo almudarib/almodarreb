@@ -37,7 +37,10 @@ export type TeacherAccountingDetails = {
   students: StudentAmount[];
 };
 
-export async function listTeacherAccountingStats(): Promise<
+export async function listTeacherAccountingStats(options?: {
+  from?: string;
+  to?: string;
+}): Promise<
   | { ok: true; stats: TeacherAccountingStats[] }
   | { ok: false; error: string; details?: unknown }
 > {
@@ -110,11 +113,19 @@ export async function listTeacherAccountingStats(): Promise<
       }
       const students_count = (studentsRows ?? []).length;
 
-      const { data: accRows, error: accErr } = await supabase
+      let accBuilder = supabase
         .from('accounting')
-        .select('amount,status')
+        .select('amount,status,created_at')
         .eq('teacher_id', tid)
         .eq('status', 'pending');
+      if (options?.from) accBuilder = accBuilder.gte('created_at', options.from);
+      if (options?.to) {
+        const d = new Date(String(options.to).replace('+00:00', 'Z'));
+        d.setUTCHours(23, 59, 59, 999);
+        const toIso = d.toISOString().replace('Z', '+00:00');
+        accBuilder = accBuilder.lte('created_at', toIso);
+      }
+      const { data: accRows, error: accErr } = await accBuilder;
       if (accErr) {
         return { ok: false, error: accErr.message, details: accErr };
       }

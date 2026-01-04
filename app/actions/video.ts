@@ -641,3 +641,39 @@ export async function reorderSessions(
   }
 }
 
+export async function countSessions(input?: {
+  kind?: 'video' | 'file';
+  created_from?: string;
+  created_to?: string;
+}): Promise<{ ok: true; total: number } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    let builder = supabase.from('sessions').select('id,video_url', { count: 'exact' });
+    if (input?.kind) {
+      const vids = ['%.mp4', '%.avi', '%.mov', '%.webm', '%.mkv', '%.mpg', '%.mpeg', '%youtube.com%', '%youtu.be%', 'youtube://%'];
+      const docs = ['%.pdf', '%.ppt', '%.pptx', '%.doc', '%.docx'];
+      const patterns = input.kind === 'video' ? vids : docs;
+      const ors = patterns.map((p) => `video_url.ilike.${p}`).join(',');
+      builder = builder.or(ors);
+    }
+    if (input?.created_from) builder = builder.gte('created_at', input.created_from);
+    if (input?.created_to) {
+      const d = new Date(String(input.created_to).replace('+00:00', 'Z'));
+      d.setUTCHours(23, 59, 59, 999);
+      const toIso = d.toISOString().replace('Z', '+00:00');
+      builder = builder.lte('created_at', toIso);
+    }
+    const { error, count } = await builder;
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    return { ok: true, total: count ?? 0 };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
