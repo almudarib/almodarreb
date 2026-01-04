@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Loader2, LockKeyhole, Mail } from "lucide-react"; // أيقونات إضافية
 
 export function LoginForm({
   className,
@@ -40,61 +41,103 @@ export function LoginForm({
       if (error) throw error;
       router.push("/admin");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(error instanceof Error ? error.message : "خطأ في البريد الإلكتروني أو كلمة المرور");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
+    <div className={cn("flex flex-col gap-6 w-full max-w-md mx-auto", className)} {...props} dir="rtl">
+      <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden bg-white/80 backdrop-blur-sm">
+        {/* شريط علوي جمالي بلون الهوية */}
+        <div className="h-2 bg-gradient-to-r from-[var(--brand-teal)] to-[var(--brand-gold)]" />
+        
+        <CardHeader className="space-y-1 text-center pt-8">
+          <CardTitle className="text-3xl font-black text-[var(--brand-dark)] tracking-tight">
+            مرحباً بك مجدداً
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-base">
+            قم بتسجيل الدخول للمتابعة إلى لوحة التحكم
           </CardDescription>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="p-8 pt-4">
           <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-6">
+            <div className="grid gap-5">
+              {/* حقل البريد الإلكتروني */}
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                <Label htmlFor="email" className="text-[var(--brand-dark)] font-bold">البريد الإلكتروني</Label>
+                <div className="relative">
+                  <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    className="pr-10 border-neutral-200 focus:border-[var(--brand-teal)] focus:ring-[var(--brand-teal-13)] transition-all"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
               </div>
+
+              {/* حقل كلمة المرور */}
               <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-[var(--brand-dark)] font-bold">كلمة المرور</Label>
                   <Link
                     href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    className="text-sm font-medium text-[var(--brand-teal)] hover:text-[var(--brand-teal-hover)] hover:underline underline-offset-4"
                   >
-                    Forgot your password?
+                    نسيت كلمة المرور؟
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <LockKeyhole className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    className="pr-10 border-neutral-200 focus:border-[var(--brand-teal)] focus:ring-[var(--brand-teal-13)] transition-all"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+
+              {/* عرض الأخطاء بشكل أفضل */}
+              {error && (
+                <div className="bg-red-50 border border-red-100 p-3 rounded-lg text-red-600 text-sm font-medium flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                  {error}
+                </div>
+              )}
+
+              {/* زر تسجيل الدخول */}
+              <Button 
+                type="submit" 
+                className="w-full h-12 text-lg font-bold bg-[var(--brand-dark)] hover:bg-black transition-all shadow-lg hover:shadow-[var(--brand-teal-13)] disabled:opacity-70" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>جاري التحقق...</span>
+                  </div>
+                ) : (
+                  "تسجيل الدخول"
+                )}
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
+      
+      <p className="px-8 text-center text-sm text-neutral-500">
+        بالضغط على تسجيل الدخول، أنت توافق على{" "}
+        <Link href="/terms" className="underline underline-offset-4 hover:text-[var(--brand-teal)]">شروط الخدمة</Link>
+      </p>
     </div>
   );
 }

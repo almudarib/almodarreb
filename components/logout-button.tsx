@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 
 export function LogoutButton({
-  label = "Logout",
+  label = "تسجيل الخروج",
   ...props
 }: Omit<ButtonProps, "onClick"> & { label?: React.ReactNode }) {
   const router = useRouter();

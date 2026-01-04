@@ -3,61 +3,79 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Box, Stack, Typography, List, ListItemButton, ListItemText, Divider } from '@mui/material';
+import { Box, Stack, Typography, List, ListItemButton, ListItemText, Divider, ListItemIcon, Avatar, Tooltip } from '@mui/material';
+import { 
+  DashboardRounded, 
+  PeopleAltRounded, 
+  SchoolRounded, 
+  QuizRounded, 
+  QuestionAnswerRounded, 
+  VideoLibraryRounded, 
+  AccountBalanceWalletRounded,
+  SettingsRounded
+} from '@mui/icons-material';
 import { LogoutButton } from '@/components/logout-button';
 
-// لوحة الألوان المستخرجة من الهوية
 const PALETTE = {
-  deepTeal: '#088395',    // اللون الأزرق البترولي في السيارة
-  gold: '#E19800',        // اللون الذهبي/البرتقالي
-  darkOlive: '#252815',   // اللون الداكن جداً
-  softSand: '#FDF7E1',    // لون خلفية فاتح مستوحى من السماء في الصورة
-  sidebarBg: '#1A1D0F',   // لون غامق للقائمة (يعطي فخامة)
+  deepTeal: '#088395',
+  gold: '#E19800',
+  darkOlive: '#1A1D0F',
+  sidebarBg: '#12140B',
+  activeLight: 'rgba(8, 131, 149, 0.15)',
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
   const links = [
-    { href: '/admin', label: 'لوحة التحكم' },
-    { href: '/admin/users', label: 'المستخدمون' },
-    { href: '/admin/students', label: 'الطلاب' },
-    { href: '/admin/exam', label: 'الامتحانات' },
-    { href: '/admin/questions', label: 'الأسئلة' },
-    { href: '/admin/video', label: 'الفيديو' },
-    { href: '/admin/accounting', label: 'الحسابات' },
+    { href: '/admin', label: 'لوحة التحكم', icon: <DashboardRounded /> },
+    { href: '/admin/users', label: 'المستخدمون', icon: <PeopleAltRounded /> },
+    { href: '/admin/students', label: 'الطلاب', icon: <SchoolRounded /> },
+    { href: '/admin/exam', label: 'الامتحانات', icon: <QuizRounded /> },
+    { href: '/admin/questions', label: 'الأسئلة', icon: <QuestionAnswerRounded /> },
+    { href: '/admin/video', label: 'الفيديو', icon: <VideoLibraryRounded /> },
+    { href: '/admin/accounting', label: 'الحسابات', icon: <AccountBalanceWalletRounded /> },
   ];
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', flexDirection: 'row', direction: 'rtl', bgcolor: '#F8F9FA' }}>
-      {/* القائمة الجانبية المطورة */}
+    <Box sx={{ display: 'flex', minHeight: '100vh', direction: 'rtl', bgcolor: '#F0F2F5' }}>
+      {/* Sidebar */}
       <Box
         component="aside"
         sx={{
-          width: 260,
-          bgcolor: PALETTE.darkOlive, // استخدام اللون الداكن من الهوية
+          width: 280,
+          bgcolor: PALETTE.sidebarBg,
           color: 'white',
-          p: 0,
           position: 'sticky',
           top: 0,
-          alignSelf: 'flex-start',
           height: '100vh',
-          textAlign: 'right',
-          boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: '10px 0 30px rgba(0,0,0,0.2)',
+          zIndex: 1100,
         }}
       >
-        <Stack spacing={0} sx={{ height: '100%' }}>
-          {/* Logo / Header المنطقة العلوية */}
-          <Box sx={{ p: 4, textAlign: 'center', background: `linear-gradient(135deg, ${PALETTE.darkOlive} 0%, #343a1c 100%)` }}>
-            <Typography variant="h5" sx={{ fontWeight: 900, color: PALETTE.gold, letterSpacing: 1 }}>
-              إدارة <span style={{ color: PALETTE.deepTeal }}>المنصة</span>
-            </Typography>
-          </Box>
+        {/* Header/Logo Section */}
+        <Box sx={{ p: 3, mb: 2 }}>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+            <Avatar sx={{ bgcolor: PALETTE.deepTeal, width: 45, height: 45, fontWeight: 'bold' }}>A</Avatar>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, color: 'white' }}>
+                لوحة <span style={{ color: PALETTE.gold }}>الإدارة</span>
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+                نظام إدارة المحتوى
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
 
-          <Divider sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 2 }} />
-
-          {/* Navigation Links */}
-          <List sx={{ px: 2 }}>
+        {/* Navigation */}
+        <Box sx={{ flexGrow: 1, px: 2, overflowY: 'auto' }}>
+          <Typography variant="overline" sx={{ px: 2, color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
+            القائمة الرئيسية
+          </Typography>
+          <List sx={{ mt: 1 }}>
             {links.map((link) => {
               const active = pathname === link.href || pathname.startsWith(link.href + '/');
               return (
@@ -68,75 +86,96 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   selected={active}
                   sx={{
                     borderRadius: '12px',
-                    mb: 1,
-                    justifyContent: 'flex-start',
-                    transition: 'all 0.3s ease',
-                    // حالة العنصر المختار
+                    mb: 0.8,
+                    py: 1.2,
+                    transition: 'all 0.2s ease-in-out',
                     '&.Mui-selected': {
                       bgcolor: PALETTE.deepTeal,
                       color: 'white',
                       '&:hover': { bgcolor: PALETTE.deepTeal },
-                      boxShadow: `0 4px 12px ${PALETTE.deepTeal}66`,
+                      '& .MuiListItemIcon-root': { color: 'white' },
                     },
-                    // حالة التمرير (Hover)
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.05)',
-                      transform: 'translateX(-5px)', // تأثير حركة بسيط لليسار بما أن الاتجاه RTL
+                      bgcolor: 'rgba(255,255,255,0.08)',
+                      transform: 'scale(1.02)',
                     }
                   }}
                 >
+                  <ListItemIcon sx={{ 
+                    minWidth: 40, 
+                    color: active ? 'white' : 'rgba(255,255,255,0.6)',
+                    transition: '0.2s' 
+                  }}>
+                    {link.icon}
+                  </ListItemIcon>
                   <ListItemText 
                     primary={link.label} 
                     primaryTypographyProps={{ 
-                      sx: { 
-                        textAlign: 'right', 
-                        fontWeight: active ? 700 : 400,
-                        fontSize: '0.95rem'
-                      } 
+                      fontSize: '0.9rem', 
+                      fontWeight: active ? 600 : 400 
                     }} 
                   />
-                  {/* علامة بسيطة بجانب العنصر النشط */}
-                  {active && (
-                    <Box sx={{ width: 4, height: 20, bgcolor: PALETTE.gold, borderRadius: 2, ml: 1 }} />
-                  )}
                 </ListItemButton>
               );
             })}
           </List>
+        </Box>
 
-          {/* Footer أو معلومات إضافية أسفل القائمة */}
-          <Box sx={{ mt: 'auto', p: 3, textAlign: 'center' }}>
-            <Stack spacing={2}>
-              <Box 
-                sx={{ 
-                  p: 2, 
-                  borderRadius: '12px', 
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px dashed rgba(255,255,255,0.1)' 
-                }}
-              >
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                  الإصدار 2.0.1
-                </Typography>
-              </Box>
-              <LogoutButton label="تسجيل الخروج" variant="outlined" size="small" />
+        {/* Footer Section */}
+        <Box sx={{ p: 2, mt: 'auto' }}>
+          <Box 
+            sx={{ 
+              p: 2, 
+              borderRadius: '16px', 
+              bgcolor: 'rgba(255,255,255,0.03)', 
+              border: '1px solid rgba(255,255,255,0.05)',
+              mb: 2 
+            }}
+          >
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>v2.0.4</Typography>
+              <Tooltip title="الإعدادات">
+                <SettingsRounded sx={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }} />
+              </Tooltip>
             </Stack>
+            <Divider sx={{ my: 1.5, bgcolor: 'rgba(255,255,255,0.05)' }} />
+            <LogoutButton variant="contained" fullWidth sx={{ 
+              bgcolor: 'rgba(255,255,255,0.05)', 
+              '&:hover': { bgcolor: '#d32f2f' } 
+            }} />
           </Box>
-        </Stack>
+        </Box>
       </Box>
 
-      {/* منطقة المحتوى الرئيسية */}
+      {/* Main Content Area */}
       <Box 
         component="main" 
         sx={{ 
           flex: 1, 
-          p: 4, 
-          bgcolor: '#f4f7f6', // لون خلفية محايد لإبراز البطاقات
+          display: 'flex',
+          flexDirection: 'column',
           minHeight: '100vh',
-          overflowY: 'auto'
+          position: 'relative',
         }}
       >
-        {children}
+        {/* Header Bar (Optional but Recommended) */}
+        <Box sx={{ 
+          height: 70, 
+          bgcolor: 'white', 
+          display: 'flex', 
+          alignItems: 'center', 
+          px: 4, 
+          boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+          borderBottom: '1px solid #E0E0E0'
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: PALETTE.darkOlive }}>
+             {links.find(l => pathname.startsWith(l.href))?.label || 'لوحة التحكم'}
+          </Typography>
+        </Box>
+
+        <Box sx={{ p: 4, flex: 1, overflowY: 'auto' }}>
+          {children}
+        </Box>
       </Box>
     </Box>
   );
