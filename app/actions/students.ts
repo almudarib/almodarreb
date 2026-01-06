@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import {
   validateAddStudentInput,
   validateListStudentsQuery,
@@ -45,6 +46,34 @@ export type AddStudentResult =
  */
 export async function addStudent(input: AddStudentInput): Promise<AddStudentResult> {
   try {
+    const supa = await createServerClient();
+    const { data: claims } = await supa.auth.getClaims();
+    const hasUser = !!claims?.claims;
+    if (!hasUser) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    if (!userId) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
+    const isAdmin = roleNames.includes('admin');
+    if (!isTeacher && !isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
     const v = validateAddStudentInput(input);
     if (!v.ok) {
       return {
@@ -67,6 +96,9 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
       create_auth?: { email: string; password: string };
     };
 
+    if (isTeacher) {
+      payload.teacher_id = userId!;
+    }
     const supabase = createAdminClient();
 
     // تأكد من وجود المعلم (teacher_id) لتجنب خطأ المفتاح الأجنبي
@@ -147,6 +179,11 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
     if (insertErr) {
       return { ok: false, error: insertErr.message, details: insertErr };
     }
+    await supabase.from('student_actions').insert({
+      student_id: (inserted as any).id as number,
+      action: 'add',
+      action_by: userId as number,
+    });
     const row = (inserted as unknown) as Record<string, unknown>;
     const student: StudentRecord = {
       id: row.id as number,
@@ -174,6 +211,68 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
   }
 }
 
+export async function deleteStudent(
+  studentId: number,
+): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
+    const isAdmin = roleNames.includes('admin');
+    const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    } else if (!isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: devRows, error: devErr } = await supabase
+      .from('student_devices')
+      .select('id')
+      .eq('student_id', studentId);
+    if (devErr) {
+      return { ok: false, error: devErr.message, details: devErr };
+    }
+    if ((devRows ?? []).length > 0) {
+      return { ok: false, error: 'لا يمكن الحذف لوجود أجهزة مرتبطة | Cannot delete: devices exist' };
+    }
+    const { error: delErr } = await supabase.from('students').delete().eq('id', studentId);
+    if (delErr) {
+      return { ok: false, error: delErr.message, details: delErr };
+    }
+    await supabase.from('student_actions').insert({
+      student_id: studentId,
+      action: 'delete',
+      action_by: userId as number,
+    });
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
 export type UpdateStudentInput = {
   id: number;
   name?: string;
@@ -192,7 +291,41 @@ export async function updateStudent(
   input: UpdateStudentInput,
 ): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: claims } = await supa.auth.getClaims();
+    const hasUser = !!claims?.claims;
+    if (!hasUser) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
+    const isAdmin = roleNames.includes('admin');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', input.id)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    } else if (!isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
     const payload: Record<string, unknown> = {};
     if (input.name !== undefined) payload.name = input.name;
     if (input.national_id !== undefined) payload.national_id = input.national_id;
@@ -209,6 +342,11 @@ export async function updateStudent(
     if (error) {
       return { ok: false, error: error.message, details: error };
     }
+    await supabase.from('student_actions').insert({
+      student_id: input.id,
+      action: 'update',
+      action_by: userId as number,
+    });
     return { ok: true };
   } catch (error) {
     return {
@@ -223,11 +361,49 @@ export async function deleteStudentDevices(
   studentId: number,
 ): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: claims } = await supa.auth.getClaims();
+    if (!claims?.claims) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
+    const isAdmin = roleNames.includes('admin');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    } else if (!isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
     const { error } = await supabase.from('student_devices').delete().eq('student_id', studentId);
     if (error) {
       return { ok: false, error: error.message, details: error };
     }
+    await supabase.from('student_actions').insert({
+      student_id: studentId,
+      action: 'delete_devices',
+      action_by: userId as number,
+    });
     return { ok: true };
   } catch (error) {
     return {
@@ -312,7 +488,30 @@ export async function getStudentProfile(
   studentId: number,
 ): Promise<{ ok: true; profile: StudentProfile } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
     const { data, error } = await supabase
       .from('students')
       .select('id,auth_user_id,name,national_id,status,show_exams,teacher_id,created_at,last_login_at')
@@ -350,7 +549,30 @@ export async function listStudentAvailableExams(
   studentId: number,
 ): Promise<{ ok: true; exams: ExamListItem[] } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
     const { data: srow, error: sErr } = await supabase
       .from('students')
       .select('show_exams,status')
@@ -398,7 +620,30 @@ export async function listStudentActiveSessions(
   studentId: number,
 ): Promise<{ ok: true; sessions: SessionListItem[] } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
     const { data: srow, error: sErr } = await supabase
       .from('students')
       .select('status')
@@ -444,7 +689,30 @@ export async function listStudentExamResults(
   studentId: number,
 ): Promise<{ ok: true; results: ExamResultItem[] } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
     const { data, error } = await supabase
       .from('exam_results')
       .select('exam_id,score,duration_minutes,taken_at')
@@ -491,7 +759,30 @@ export async function getStudentProgressOverview(
   studentId: number,
 ): Promise<{ ok: true; progress: StudentProgressOverview } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
     const [ses, res] = await Promise.all([
       supabase.from('student_sessions').select('duration_minutes').eq('student_id', studentId),
       supabase
@@ -587,11 +878,45 @@ export async function setStudentStatus(
   status: string,
 ): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
+    const isAdmin = roleNames.includes('admin');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    } else if (!isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
     const { error } = await supabase.from('students').update({ status }).eq('id', studentId);
     if (error) {
       return { ok: false, error: error.message, details: error };
     }
+    await supabase.from('student_actions').insert({
+      student_id: studentId,
+      action: 'status',
+      action_by: userId as number,
+    });
     return { ok: true };
   } catch (error) {
     return {
@@ -613,7 +938,30 @@ export async function getStudentProgress(
   studentId: number,
 ): Promise<{ ok: true; progress: StudentProgressData } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
     const { data: sessions, error: sesErr } = await supabase
       .from('student_sessions')
       .select('duration_minutes')
@@ -665,7 +1013,30 @@ export async function getStudentLoginHistory(
   studentId: number,
 ): Promise<{ ok: true; events: StudentLoginEvent[] } | { ok: false; error: string; details?: unknown }> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
     const { data, error } = await supabase
       .from('student_sessions')
       .select('opened_at,duration_minutes')
@@ -725,6 +1096,19 @@ export async function listStudents(
   query: ListStudentsQuery,
 ): Promise<ListStudentsResult> {
   try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
     const v = validateListStudentsQuery(query);
     if (!v.ok) {
       return {
@@ -750,6 +1134,9 @@ export async function listStudents(
       per_page: number;
     };
 
+    if (isTeacher) {
+      q.teacher_id = userId as number;
+    }
     const supabase = createAdminClient();
     let builder = supabase
       .from('students')

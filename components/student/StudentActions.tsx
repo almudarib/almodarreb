@@ -29,24 +29,30 @@ export function StudentActions({ student, onOpenDetails }: StudentActionsProps) 
     setAnchorEl(null);
   }
 
+  function formatErrorMessage(msg: string) {
+    const m = String(msg || '').toLowerCase();
+    if (m.includes('غير مصرح') || m.includes('unauthorized')) return 'غير مصرح: ليس لديك صلاحية لتنفيذ هذه العملية';
+    return msg;
+  }
+
   async function handleDeleteDevices() {
     handleClose();
     if (!confirm('هل أنت متأكد من حذف الأجهزة لهذا الطالب؟')) return;
     const r = await deleteStudentDevices(student.id);
     if (r.ok) router.refresh();
-    else alert(r.error);
+    else alert(formatErrorMessage(r.error));
   }
   async function handlePass() {
     handleClose();
     const r = await setStudentStatus(student.id, 'passed');
     if (r.ok) router.refresh();
-    else alert(r.error);
+    else alert(formatErrorMessage(r.error));
   }
   async function handleFail() {
     handleClose();
     const r = await setStudentStatus(student.id, 'failed');
     if (r.ok) router.refresh();
-    else alert(r.error);
+    else alert(formatErrorMessage(r.error));
   }
   function handleEdit() {
     handleClose();

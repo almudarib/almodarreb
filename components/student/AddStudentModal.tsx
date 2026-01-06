@@ -14,9 +14,10 @@ export type AddStudentModalProps = {
   open: boolean;
   onClose: () => void;
   defaultTeacherId?: number;
+  lockTeacher?: boolean;
 };
 
-export function AddStudentModal({ open, onClose, defaultTeacherId }: AddStudentModalProps) {
+export function AddStudentModal({ open, onClose, defaultTeacherId, lockTeacher }: AddStudentModalProps) {
   const router = useRouter();
   const [saving, setSaving] = React.useState(false);
 
@@ -50,11 +51,11 @@ export function AddStudentModal({ open, onClose, defaultTeacherId }: AddStudentM
         }));
       }
     }
-    if (open) loadTeachers();
+    if (open && !lockTeacher) loadTeachers();
     return () => {
       active = false;
     };
-  }, [open]);
+  }, [open, lockTeacher]);
 
   async function handleSubmit() {
     setSaving(true);
@@ -144,22 +145,24 @@ export function AddStudentModal({ open, onClose, defaultTeacherId }: AddStudentM
                 label="إظهار الاختبارات"
               />
             </Box>
-            <Box>
-              <Label>الأستاذ المشرف</Label>
-              <Input
-                select
-                value={form.teacher_id}
-                onChange={(e) => setField('teacher_id', Number(e.target.value))}
-                aria-label="الأستاذ المشرف"
-              >
-                {teachers.map((t) => (
-                  <MenuItem key={t.id} value={t.id}>
-                    {t.name}
-                  </MenuItem>
-                ))}
-              </Input>
-              {errors.teacher_id ? <Typography variant="caption" color="error">{errors.teacher_id}</Typography> : null}
-            </Box>
+            {lockTeacher ? null : (
+              <Box>
+                <Label>الأستاذ المشرف</Label>
+                <Input
+                  select
+                  value={form.teacher_id}
+                  onChange={(e) => setField('teacher_id', Number(e.target.value))}
+                  aria-label="الأستاذ المشرف"
+                >
+                  {teachers.map((t) => (
+                    <MenuItem key={t.id} value={t.id}>
+                      {t.name}
+                    </MenuItem>
+                  ))}
+                </Input>
+                {errors.teacher_id ? <Typography variant="caption" color="error">{errors.teacher_id}</Typography> : null}
+              </Box>
+            )}
           </Box>
         </Stack>
       </Box>

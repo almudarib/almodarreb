@@ -25,6 +25,8 @@ export type StudentTableProps = {
   sortBy: 'created_at' | 'name' | 'exam_datetime' | 'registration_date';
   sortDir: 'asc' | 'desc';
   initialSearch?: string;
+  defaultTeacherId?: number;
+  lockTeacherAdd?: boolean;
 };
 
 export function StudentTable({
@@ -35,6 +37,8 @@ export function StudentTable({
   sortBy,
   sortDir,
   initialSearch,
+  defaultTeacherId,
+  lockTeacherAdd,
 }: StudentTableProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -267,7 +271,12 @@ export function StudentTable({
         student={selected}
         teacherName={selected?.teacher_name}
       />
-      <AddStudentModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddStudentModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        defaultTeacherId={defaultTeacherId}
+        lockTeacher={lockTeacherAdd}
+      />
       </StudentUIProvider>
     </Box>
   );

@@ -1,3 +1,4 @@
+'use client';
 import Link from 'next/link';
 import { Container, Stack, Typography, Box } from '@mui/material';
 import { Card, CardHeader, CardContent, CardActions, Button } from '@/components/ui';
@@ -29,7 +30,7 @@ export default function Page() {
             </Typography>
           </CardContent>
           <CardActions sx={{ justifyContent: 'flex-end' }}>
-            <Link href="/teacher/students" style={{ textDecoration: 'none' }}>
+            <Link href="/teacher/students" legacyBehavior>
               <Button component="a" variant="contained">
                 فتح صفحة الطلاب
               </Button>
@@ -47,9 +48,14 @@ export default function Page() {
           />
           <CardContent>
             <Stack spacing={1.5}>
-              <Link href="/teacher/students" style={{ textDecoration: 'none' }}>
+              <Link href="/teacher/students" legacyBehavior>
                 <Button component="a" variant="outlined">
                   إدارة الطلاب
+                </Button>
+              </Link>
+              <Link href="/teacher/accounting" legacyBehavior>
+                <Button component="a" variant="outlined">
+                  حسابك مع المدير
                 </Button>
               </Link>
             </Stack>

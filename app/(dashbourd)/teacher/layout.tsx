@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Box, Stack, Typography, List, ListItemButton, ListItemText, Divider, ListItemIcon, Avatar, Tooltip } from '@mui/material';
-import { DashboardRounded, SchoolRounded, SettingsRounded } from '@mui/icons-material';
+import { DashboardRounded, SchoolRounded, SettingsRounded, PaidRounded } from '@mui/icons-material';
 import { LogoutButton } from '@/components/logout-button';
 
 const PALETTE = {
@@ -21,6 +21,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const links = [
     { href: '/teacher', label: 'لوحة الأستاذ', icon: <DashboardRounded /> },
     { href: '/teacher/students', label: 'الطلاب', icon: <SchoolRounded /> },
+    { href: '/teacher/accounting', label: 'الحساب مع المدير', icon: <PaidRounded /> },
   ];
 
   return (

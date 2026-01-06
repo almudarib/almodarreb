@@ -1,5 +1,6 @@
 import { listStudents } from '@/app/actions/students';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 import StudentTable, { type StudentWithTeacher } from '@/components/student/StudentTable';
 import { Suspense } from 'react';
 import { Container, Stack, Typography, Alert, Box } from '@mui/material';
@@ -95,6 +96,19 @@ async function StudentsContent({
     teacher_name: teacherNameById.get(s.teacher_id),
   }));
 
+  const supa = await createServerClient();
+  const { data: u } = await supa.auth.getUser();
+  const uid = u.user?.id ?? null;
+  let currentTeacherId: number | undefined = undefined;
+  if (uid) {
+    const { data: me } = await (createAdminClient())
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', uid)
+      .maybeSingle();
+    currentTeacherId = (me?.id as number | undefined) ?? undefined;
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
@@ -116,6 +130,8 @@ async function StudentsContent({
               sortBy={q.sort_by ?? 'created_at'}
               sortDir={q.sort_dir ?? 'desc'}
               initialSearch={q.search}
+              defaultTeacherId={currentTeacherId}
+              lockTeacherAdd
             />
           </Box>
         </CardContent>
