@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 export type AccountingStatus = 'pending' | 'paid' | string;
 
@@ -524,6 +525,48 @@ export async function getTeacherAccountingDetails(
       students: filteredStudents,
     };
     return { ok: true, details };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function getCurrentTeacherAccountingDetails(): Promise<
+  | { ok: true; details: TeacherAccountingDetails }
+  | { ok: false; error: string; details?: unknown }
+> {
+  try {
+    const supa = await createServerClient();
+    const { data: claims } = await supa.auth.getClaims();
+    const hasUser = !!claims?.claims;
+    if (!hasUser) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    if (!userId) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    if (!roleNames.includes('teacher')) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const res = await getTeacherAccountingDetails(userId);
+    return res;
   } catch (error) {
     return {
       ok: false,

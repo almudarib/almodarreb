@@ -442,6 +442,81 @@ export async function countStudents(input?: {
   }
 }
 
+export type StudentStatusCounts = {
+  active: number;
+  inactive: number;
+  passed: number;
+  failed: number;
+  total: number;
+};
+
+export async function countStudentsByStatusForCurrentTeacher(): Promise<
+  | { ok: true; counts: StudentStatusCounts }
+  | { ok: false; error: string; details?: unknown }
+> {
+  try {
+    const supa = await createServerClient();
+    const { data: claims } = await supa.auth.getClaims();
+    const hasUser = !!claims?.claims;
+    if (!hasUser) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    if (!userId) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    if (!roleNames.includes('teacher')) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('students')
+      .select('status')
+      .eq('teacher_id', userId);
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+
+    const counts: StudentStatusCounts = {
+      active: 0,
+      inactive: 0,
+      passed: 0,
+      failed: 0,
+      total: 0,
+    };
+    for (const row of data ?? []) {
+      const status = (row as { status?: string }).status ?? 'inactive';
+      if (status === 'active') counts.active += 1;
+      else if (status === 'inactive') counts.inactive += 1;
+      else if (status === 'passed') counts.passed += 1;
+      else if (status === 'failed') counts.failed += 1;
+      else counts.inactive += 1;
+      counts.total += 1;
+    }
+    return { ok: true, counts };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
 export type StudentProfile = {
   id: number;
   auth_user_id: string;
