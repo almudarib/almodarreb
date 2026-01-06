@@ -1,5 +1,5 @@
 {
-  "publicPaths": ["/", "/auth/login", "/auth/confirm", "/student/login"],
+  "publicPaths": ["/", "/auth/login", "/auth/confirm"],
   "roles": {
     "admin": {
       "home": "/admin",
@@ -10,9 +10,9 @@
       "allowed": ["/teacher"]
     },
     "student": {
-      "home": "/student",
-      "allowed": ["/student", "/student/login"]
+      "home": "/auth/login",
+      "allowed": []
     }
   },
-  "defaultRole": "student"
+  "defaultRole": "teacher"
 }

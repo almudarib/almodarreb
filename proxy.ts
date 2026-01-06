@@ -118,7 +118,7 @@ export async function proxy(request: NextRequest) {
     !user &&
     !pathname.startsWith("/login") &&
     !pathname.startsWith("/auth") &&
-    !pathname.startsWith("/student/login")
+    true
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
@@ -143,9 +143,7 @@ export async function proxy(request: NextRequest) {
   let dest: string | null = null;
 
   if (!user) {
-    if (pathname.startsWith("/student") && !pathname.startsWith("/student/login")) {
-      dest = "/student/login";
-    } else if (!isPublicPath(pathname)) {
+    if (!isPublicPath(pathname)) {
       dest = "/auth/login";
     }
   } else {
@@ -153,13 +151,9 @@ export async function proxy(request: NextRequest) {
       dest = roleHome;
     } else if (pathname.startsWith("/auth/login")) {
       dest = roleHome;
-    } else if (pathname.startsWith("/student/login")) {
-      dest = role === "student" ? rbac.roles.student.home : roleHome;
     } else if (pathname.startsWith("/admin") && role !== "admin") {
       dest = roleHome;
     } else if (pathname.startsWith("/teacher") && role !== "teacher") {
-      dest = roleHome;
-    } else if (pathname.startsWith("/student") && role !== "student") {
       dest = roleHome;
     }
   }
