@@ -9,7 +9,12 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import type { StudentRecord } from '@/app/actions/students';
-import { deleteStudentDevices, setStudentStatus } from '@/app/actions/students';
+import {
+  deleteStudentDevices,
+  passStudentAndDelete,
+  failStudentResetDetails,
+  deleteStudent,
+} from '@/app/actions/students';
 import { useRouter } from 'next/navigation';
 
 export type StudentActionsProps = {
@@ -44,13 +49,27 @@ export function StudentActions({ student, onOpenDetails }: StudentActionsProps) 
   }
   async function handlePass() {
     handleClose();
-    const r = await setStudentStatus(student.id, 'passed');
+    if (!confirm('تأكيد: سيتم حذف سجل الطالب نهائيًا كـ نجاح. متابعة؟')) return;
+    const r = await passStudentAndDelete(student.id);
     if (r.ok) router.refresh();
     else alert(formatErrorMessage(r.error));
   }
   async function handleFail() {
     handleClose();
-    const r = await setStudentStatus(student.id, 'failed');
+    if (
+      !confirm(
+        'تأكيد: سيتم مسح جلسات الطالب ونتائج الامتحانات وسجل الإجراءات وتعيين الحالة "راسب". متابعة؟',
+      )
+    )
+      return;
+    const r = await failStudentResetDetails(student.id);
+    if (r.ok) router.refresh();
+    else alert(formatErrorMessage(r.error));
+  }
+  async function handleDeleteStudent() {
+    handleClose();
+    if (!confirm('تأكيد: سيتم حذف الطالب نهائيًا. متابعة؟')) return;
+    const r = await deleteStudent(student.id);
     if (r.ok) router.refresh();
     else alert(formatErrorMessage(r.error));
   }
@@ -89,6 +108,16 @@ export function StudentActions({ student, onOpenDetails }: StudentActionsProps) 
               </Stack>
             ),
             onClick: handleDeleteDevices,
+            tone: 'error',
+          },
+          {
+            label: (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <DeleteOutlineIcon fontSize="small" />
+                <Typography>حذف الطالب</Typography>
+              </Stack>
+            ),
+            onClick: handleDeleteStudent,
             tone: 'error',
           },
           {

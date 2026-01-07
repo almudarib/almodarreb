@@ -245,25 +245,84 @@ export async function deleteStudent(
     } else if (!isAdmin) {
       return { ok: false, error: 'غير مصرح | Unauthorized' };
     }
-    const { data: devRows, error: devErr } = await supabase
-      .from('student_devices')
-      .select('id')
-      .eq('student_id', studentId);
-    if (devErr) {
-      return { ok: false, error: devErr.message, details: devErr };
+    const { error: actDelErr } = await supabase.from('student_actions').delete().eq('student_id', studentId);
+    if (actDelErr) {
+      return { ok: false, error: actDelErr.message, details: actDelErr };
     }
-    if ((devRows ?? []).length > 0) {
-      return { ok: false, error: 'لا يمكن الحذف لوجود أجهزة مرتبطة | Cannot delete: devices exist' };
+    const { error: accErr } = await supabase.from('accounting').delete().eq('student_id', studentId);
+    if (accErr) {
+      return { ok: false, error: accErr.message, details: accErr };
     }
     const { error: delErr } = await supabase.from('students').delete().eq('id', studentId);
     if (delErr) {
       return { ok: false, error: delErr.message, details: delErr };
     }
-    await supabase.from('student_actions').insert({
-      student_id: studentId,
-      action: 'delete',
-      action_by: userId as number,
-    });
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function passStudentAndDelete(
+  studentId: number,
+): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  return deleteStudent(studentId);
+}
+
+export async function failStudentResetDetails(
+  studentId: number,
+): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
+    const isAdmin = roleNames.includes('admin');
+    const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    } else if (!isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { error: sesErr } = await supabase.from('student_sessions').delete().eq('student_id', studentId);
+    if (sesErr) {
+      return { ok: false, error: sesErr.message, details: sesErr };
+    }
+    const { error: resErr } = await supabase.from('exam_results').delete().eq('student_id', studentId);
+    if (resErr) {
+      return { ok: false, error: resErr.message, details: resErr };
+    }
+    const { error: actErr } = await supabase.from('student_actions').delete().eq('student_id', studentId);
+    if (actErr) {
+      return { ok: false, error: actErr.message, details: actErr };
+    }
+    const { error: updErr } = await supabase.from('students').update({ status: 'failed' }).eq('id', studentId);
+    if (updErr) {
+      return { ok: false, error: updErr.message, details: updErr };
+    }
     return { ok: true };
   } catch (error) {
     return {
