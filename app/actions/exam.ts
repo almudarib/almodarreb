@@ -222,7 +222,10 @@ type ImageInput =
   | { url: string }
   | { base64: string; filename: string; contentType: string };
 
-async function uploadImage(input: ImageInput): Promise<
+async function uploadImage(
+  input: ImageInput,
+  opts?: { questionId?: number },
+): Promise<
   | { ok: true; url: string }
   | { ok: false; error: string; details?: unknown }
 > {
@@ -239,9 +242,11 @@ async function uploadImage(input: ImageInput): Promise<
     const stamp = Date.now();
     const rand = Math.random().toString(36).slice(2);
     const cleanName = input.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `exams/${new Date().getUTCFullYear()}/${String(
+    const path = `exam-images/${new Date().getUTCFullYear()}/${String(
       new Date().getUTCMonth() + 1,
-    ).padStart(2, '0')}/${stamp}_${rand}_${cleanName}`;
+    ).padStart(2, '0')}/${
+      opts?.questionId ? `${String(opts.questionId)}_` : ''
+    }${stamp}_${rand}_${cleanName}`;
     const buf = Buffer.from(
       input.base64.includes('base64,')
         ? input.base64.split('base64,').pop() as string
@@ -295,20 +300,13 @@ export async function addExamQuestion(
     if (!oa || !ob || !oc || !od) return { ok: false, error: 'الخيارات مطلوبة' };
     if (!['A', 'B', 'C', 'D'].includes(co)) return { ok: false, error: 'الخيار الصحيح غير صالح' };
 
-    let imageUrl: string | null = null;
-    if (input.image) {
-      const uploaded = await uploadImage(input.image);
-      if (!uploaded.ok) return uploaded;
-      imageUrl = uploaded.url;
-    }
-
     const supabase = createAdminClient();
-    const { data, error } = await supabase
+    const { data: inserted, error: insertErr } = await supabase
       .from('exam_questions')
       .insert({
         exam_id: input.exam_id,
         question: q,
-        image_url: imageUrl,
+        image_url: null,
         option_a: oa,
         option_b: ob,
         option_c: oc,
@@ -319,15 +317,47 @@ export async function addExamQuestion(
         'id,exam_id,question,image_url,option_a,option_b,option_c,option_d,correct_option',
       )
       .single();
-    if (error) {
-      return { ok: false, error: error.message, details: error };
+    if (insertErr) {
+      return { ok: false, error: insertErr.message, details: insertErr };
     }
-    const r = data as unknown as Record<string, unknown>;
+    const r = inserted as unknown as Record<string, unknown>;
+    let finalImageUrl: string | null = null;
+    if (input.image) {
+      if ('url' in input.image) {
+        const candidate = String(input.image.url).trim();
+        if (!candidate) {
+          return { ok: false, error: 'رابط الصورة غير صالح' };
+        }
+        const { data: dupe } = await supabase
+          .from('exam_questions')
+          .select('id')
+          .eq('image_url', candidate)
+          .limit(1);
+        const exists = (dupe ?? []).find((row) => (row as unknown as { id: number }).id !== (r.id as number));
+        if (exists) {
+          return { ok: false, error: 'هذه الصورة مستخدمة لسؤال آخر' };
+        }
+        finalImageUrl = candidate;
+      } else {
+        const uploaded = await uploadImage(input.image, { questionId: r.id as number });
+        if (!uploaded.ok) return uploaded;
+        finalImageUrl = uploaded.url;
+      }
+      if (finalImageUrl) {
+        const { error: updErr } = await supabase
+          .from('exam_questions')
+          .update({ image_url: finalImageUrl })
+          .eq('id', r.id as number);
+        if (updErr) {
+          return { ok: false, error: updErr.message, details: updErr };
+        }
+      }
+    }
     const rec: QuestionRecord = {
       id: r.id as number,
       exam_id: r.exam_id as number,
       question: r.question as string,
-      image_url: (r.image_url as string | null) ?? null,
+      image_url: finalImageUrl ?? ((r.image_url as string | null) ?? null),
       option_a: r.option_a as string,
       option_b: r.option_b as string,
       option_c: r.option_c as string,
@@ -360,6 +390,17 @@ export async function updateExamQuestion(
 ): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
   try {
     const supabase = createAdminClient();
+    const { data: currentRow, error: fetchErr } = await supabase
+      .from('exam_questions')
+      .select('id,image_url')
+      .eq('id', input.id)
+      .maybeSingle();
+    if (fetchErr) {
+      return { ok: false, error: fetchErr.message, details: fetchErr };
+    }
+    if (!currentRow) {
+      return { ok: false, error: 'السؤال غير موجود' };
+    }
     const payload: Record<string, unknown> = {};
     if (input.question !== undefined) payload.question = String(input.question).trim();
     if (input.option_a !== undefined) payload.option_a = String(input.option_a).trim();
@@ -373,9 +414,22 @@ export async function updateExamQuestion(
       } else if ((input.image as { remove?: boolean })?.remove) {
         payload.image_url = null;
       } else {
-        const uploaded = await uploadImage(input.image as ImageInput);
-        if (!uploaded.ok) return uploaded;
-        payload.image_url = uploaded.url;
+        if ('url' in (input.image as ImageInput)) {
+          const candidate = String((input.image as { url: string }).url).trim();
+          if (!candidate) return { ok: false, error: 'رابط الصورة غير صالح' };
+          const { data: dupe } = await supabase
+            .from('exam_questions')
+            .select('id')
+            .eq('image_url', candidate)
+            .limit(1);
+          const exists = (dupe ?? []).find((row) => (row as unknown as { id: number }).id !== (input.id as number));
+          if (exists) return { ok: false, error: 'هذه الصورة مستخدمة لسؤال آخر' };
+          payload.image_url = candidate;
+        } else {
+          const uploaded = await uploadImage(input.image as ImageInput, { questionId: input.id });
+          if (!uploaded.ok) return uploaded;
+          payload.image_url = uploaded.url;
+        }
       }
     }
     const { error } = await supabase.from('exam_questions').update(payload).eq('id', input.id);
