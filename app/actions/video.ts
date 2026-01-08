@@ -86,6 +86,32 @@ function parseStorageRef(url: string): { bucket: string; path: string } | null {
   if (!bucket || !path) return null;
   return { bucket, path };
 }
+function buildPublicBase(): string {
+  const custom = String(process.env.NEXT_PUBLIC_FILE_PUBLIC_BASE_URL ?? '').trim().replace(/[\/\s]+$/, '');
+  if (custom) return custom;
+  const supa = String(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim().replace(/[\/\s]+$/, '').replace(/\/+$/, '');
+  return `${supa}/storage/v1/object/public`;
+}
+function toPublicUrl(url: string): string {
+  const parsed = parseStorageRef(url);
+  if (!parsed) return url;
+  const base = buildPublicBase();
+  return `${base}/${parsed.bucket}/${parsed.path}`;
+}
+function parsePublicUrl(u: string): { bucket: string; path: string } | null {
+  const base = buildPublicBase();
+  const s = String(u ?? '').trim();
+  const marker = `${base}/`;
+  const at = s.indexOf(marker);
+  if (at === -1) return null;
+  const rest = s.slice(at + marker.length);
+  const idx = rest.indexOf('/');
+  if (idx <= 0) return null;
+  const bucket = rest.slice(0, idx);
+  const path = rest.slice(idx + 1);
+  if (!bucket || !path) return null;
+  return { bucket, path };
+}
 async function ensureAdmin(): Promise<{ ok: true; auth_user_id: string; user_id: number } | { ok: false; error: string; details?: unknown }> {
   try {
     const supabaseServer = await createServerClient();
@@ -194,7 +220,7 @@ async function ensureSessionBucket(): Promise<
     const { data: exists } = await supabase.storage.getBucket(bucket);
     if (!exists) {
       const { error: createErr } = await supabase.storage.createBucket(bucket, {
-        public: false,
+        public: true,
         fileSizeLimit: 5 * 1024 * 1024 * 1024,
       });
       if (createErr) {
@@ -202,6 +228,7 @@ async function ensureSessionBucket(): Promise<
       }
     } else {
       await supabase.storage.updateBucket(bucket, {
+        public: true,
         fileSizeLimit: 5 * 1024 * 1024 * 1024,
       });
     }
@@ -443,7 +470,7 @@ export async function createSession(
             return { ok: false, error: 'مرجع تخزين غير مسموح' };
           }
           await persistDirectUploadMetadata(payload.content.url, payload.content.kind);
-          video_url = payload.content.url;
+          video_url = toPublicUrl(payload.content.url);
         } else {
           video_url = payload.content.url;
         }
@@ -464,7 +491,7 @@ export async function createSession(
         kind: payload.content.kind,
         createdAt: new Date().toISOString(),
       });
-      video_url = uploaded.ref;
+      video_url = toPublicUrl(uploaded.ref);
     }
     const supabase = createAdminClient();
     const toInsert: Record<string, unknown> = {
@@ -563,7 +590,7 @@ export async function updateSession(
               return { ok: false, error: 'مرجع تخزين غير مسموح' };
             }
             await persistDirectUploadMetadata(payload.content.url, (payload.content.kind ?? 'video') as 'video' | 'file');
-            nextUrl = payload.content.url;
+            nextUrl = toPublicUrl(payload.content.url);
           } else {
             nextUrl = payload.content.url;
           }
@@ -584,7 +611,7 @@ export async function updateSession(
           kind: payload.content.kind,
           createdAt: new Date().toISOString(),
         });
-        nextUrl = uploaded.ref;
+        nextUrl = toPublicUrl(uploaded.ref);
       }
       update.video_url = nextUrl;
     }
@@ -622,8 +649,11 @@ export async function deleteSession(id: number): Promise<{ ok: true } | { ok: fa
     if (error) {
       return { ok: false, error: error.message, details: error };
     }
-    if (url && isStorageRef(url)) {
-      const parsed = parseStorageRef(url);
+    if (url) {
+      let parsed = isStorageRef(url) ? parseStorageRef(url) : null;
+      if (!parsed && (url.startsWith('http://') || url.startsWith('https://'))) {
+        parsed = parsePublicUrl(url);
+      }
       if (parsed) {
         await supabase.storage.from(parsed.bucket).remove([parsed.path]);
       }
@@ -637,6 +667,7 @@ export async function deleteSession(id: number): Promise<{ ok: true } | { ok: fa
     };
   }
 }
+
 
 export async function listSessions(
   query: ListSessionsQuery,
@@ -673,13 +704,13 @@ export async function listSessions(
       const term = String(q.search).trim().replace(/%/g, '\\%').replace(/_/g, '\\_');
       builder = builder.ilike('title', `%${term}%`);
     }
-  if (q.kind) {
-      const vids = ['%.mp4', '%.avi', '%.mov', '%.webm', '%.mkv', '%.mpg', '%.mpeg', '%youtube.com%', '%youtu.be%', 'youtube://%'];
-      const docs = ['%.pdf', '%.ppt', '%.pptx', '%.doc', '%.docx'];
+    if (q.kind) {
+      const vids = ['%.mp4', '%.avi', '%.mov', '%.webm', '%.mkv', '%.mpg', '%.mpeg', '%youtube.com%', '%youtu.be%', 'storage://session-videos/%'];
+      const docs = ['%.pdf', '%.ppt', '%.pptx', '%.doc', '%.docx', 'storage://session-files/%'];
       const patterns = q.kind === 'video' ? vids : docs;
       const ors = patterns.map((p) => `video_url.ilike.${p}`).join(',');
       builder = builder.or(ors);
-  }
+    }
     builder = builder.order(q.sort_by, { ascending: q.sort_dir === 'asc', nullsFirst: false });
     const from = (q.page - 1) * q.per_page;
     const to = from + q.per_page - 1;
@@ -688,23 +719,20 @@ export async function listSessions(
     if (error) {
       return { ok: false, error: error.message, details: error };
     }
-    const sessionsRaw: SessionRecord[] = (data ?? []).map((row) => {
-      const r = row as unknown as Record<string, unknown>;
+    const sessions: SessionRecord[] = (data ?? []).map((row: Record<string, unknown>) => {
+      const raw = row as Record<string, unknown>;
+      const original = raw.video_url as string;
+      const finalUrl = isStorageRef(original) ? toPublicUrl(original) : original;
       return {
-        id: r.id as number,
-        title: r.title as string,
-        video_url: r.video_url as string,
-        language: r.language as string,
-        order_number: (r.order_number as number | null) ?? null,
-        is_active: (r.is_active as boolean | undefined) ?? true,
-        created_at: r.created_at as string,
+        id: raw.id as number,
+        title: raw.title as string,
+        video_url: finalUrl,
+        language: raw.language as string,
+        order_number: (raw.order_number as number | null) ?? null,
+        is_active: (raw.is_active as boolean | undefined) ?? true,
+        created_at: raw.created_at as string,
       };
     });
-    const sessions: SessionRecord[] = [];
-    for (const s of sessionsRaw) {
-      const signed = isStorageRef(s.video_url) ? await getSignedUrlIfStorage(s.video_url) : s.video_url;
-      sessions.push({ ...s, video_url: signed });
-    }
     return { ok: true, sessions, page: q.page, perPage: q.per_page, total: count ?? null };
   } catch (error) {
     return {
