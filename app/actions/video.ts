@@ -50,6 +50,24 @@ export type ListSessionsQuery = {
   per_page?: number;
 };
 
+export type CreateUploadTargetInput = {
+  filename: string;
+  contentType?: string;
+  kind?: 'video' | 'file';
+  language?: string;
+  upsert?: boolean;
+};
+export type CreateUploadTargetResult =
+  | {
+      ok: true;
+      bucket: string;
+      path: string;
+      ref: string;
+      signedUrl: string;
+      token: string;
+    }
+  | { ok: false; error: string; details?: unknown };
+
 function sanitizeFilename(name: string) {
   const base = name.replace(/[^a-zA-Z0-9._-]/g, '_');
   return base.length > 180 ? base.slice(-180) : base;
@@ -177,17 +195,63 @@ async function ensureSessionBucket(): Promise<
     if (!exists) {
       const { error: createErr } = await supabase.storage.createBucket(bucket, {
         public: false,
-        fileSizeLimit: 1024 * 1024 * 1024,
+        fileSizeLimit: 5 * 1024 * 1024 * 1024,
       });
       if (createErr) {
         return { ok: false, error: createErr.message, details: createErr };
       }
+    } else {
+      await supabase.storage.updateBucket(bucket, {
+        fileSizeLimit: 5 * 1024 * 1024 * 1024,
+      });
     }
     return { ok: true, bucket };
   } catch (error) {
     return {
       ok: false,
       error: error instanceof Error ? error.message : 'Unknown error',
+      details: error,
+    };
+  }
+}
+
+export async function createUploadTarget(
+  input: CreateUploadTargetInput,
+): Promise<CreateUploadTargetResult> {
+  try {
+    const auth = await ensureAdmin();
+    if (!auth.ok) {
+      return { ok: false, error: auth.error, details: auth.details };
+    }
+    const ensured = await ensureSessionBucket();
+    if (!ensured.ok) return ensured;
+    const bucket = ensured.bucket;
+    const stamp = Date.now();
+    const rand = Math.random().toString(36).slice(2);
+    const clean = sanitizeFilename(input.filename);
+    const folder = `sessions/${new Date().getUTCFullYear()}/${String(
+      new Date().getUTCMonth() + 1,
+    ).padStart(2, '0')}/${String(new Date().getUTCDate()).padStart(2, '0')}`;
+    const path = `${folder}/${stamp}_${rand}_${clean}`;
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUploadUrl(path);
+    if (error || !data?.signedUrl || !data?.token) {
+      return { ok: false, error: error?.message ?? 'فشل إنشاء رابط رفع موقّع', details: error };
+    }
+    return {
+      ok: true,
+      bucket,
+      path,
+      ref: `storage://${bucket}/${path}`,
+      signedUrl: data.signedUrl,
+      token: data.token,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
       details: error,
     };
   }
@@ -241,6 +305,41 @@ async function uploadMetadata(pathRef: string, metadata: Record<string, unknown>
     });
   } catch {
     // ignore metadata upload failures
+  }
+}
+
+export async function finalizeUpload(input: {
+  ref: string;
+  kind: 'video' | 'file';
+  filename?: string;
+  contentType?: string;
+  sizeBytes?: number | null;
+}): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const auth = await ensureAdmin();
+    if (!auth.ok) {
+      return { ok: false, error: auth.error, details: auth.details };
+    }
+    if (!isStorageRef(input.ref)) {
+      return { ok: false, error: 'مرجع التخزين غير صالح' };
+    }
+    const meta: Record<string, unknown> = {
+      source: 'upload',
+      filename: input.filename ?? null,
+      contentType: input.contentType ?? null,
+      sizeBytes: input.sizeBytes ?? null,
+      durationSeconds: null,
+      kind: input.kind,
+      createdAt: new Date().toISOString(),
+    };
+    await uploadMetadata(input.ref, meta);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
   }
 }
 function isYouTubeUrl(u: string): boolean {

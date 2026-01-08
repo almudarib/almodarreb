@@ -20,6 +20,8 @@ import {
   createSession,
   updateSession,
   deleteSession,
+  createUploadTarget,
+  finalizeUpload,
   type ListSessionsQuery,
   type SessionRecord,
 } from '@/app/actions/video';
@@ -29,7 +31,135 @@ import { createClient as createSupabaseClient } from '@/lib/supabase/client';
 type Lang = 'AR' | 'EN';
 type Kind = 'video' | 'file';
 
- 
+function buildTusEndpoint(url: string) {
+  const base = String(url ?? '').trim().replace(/[,\s]+$/, '').replace(/\/+$/, '');
+  return `${base}/storage/v1/upload/resumable`;
+}
+
+async function uploadFileResumableTus(file: File, onProgress?: (p: number) => void): Promise<{ ok: true; ref: string } | { ok: false; error: string }> {
+  try {
+    const target = await createUploadTarget({
+      filename: file.name,
+      contentType: file.type || 'application/octet-stream',
+      kind: (file.type || '').startsWith('video') ? 'video' : 'file',
+      upsert: false,
+    });
+    if (!target.ok) {
+      return { ok: false, error: target.error };
+    }
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+    const endpoint = buildTusEndpoint(supabaseUrl);
+    let tusModule: { Upload: new (
+      file: File,
+      options: {
+        endpoint: string;
+        retryDelays?: number[];
+        chunkSize?: number;
+        metadata?: Record<string, string>;
+        headers?: Record<string, string>;
+        removeFingerprintOnSuccess?: boolean;
+        uploadDataDuringCreation?: boolean;
+        onError?: (err: Error) => void;
+        onProgress?: (bytesSent: number, bytesTotal: number) => void;
+        onSuccess?: () => void;
+      },
+    ) => { start: () => void } } | null = null;
+    try {
+      tusModule = (await import('tus-js-client')) as {
+        Upload: new (
+          file: File,
+          options: {
+            endpoint: string;
+            retryDelays?: number[];
+            chunkSize?: number;
+            metadata?: Record<string, string>;
+            headers?: Record<string, string>;
+            removeFingerprintOnSuccess?: boolean;
+            uploadDataDuringCreation?: boolean;
+            onError?: (err: Error) => void;
+            onProgress?: (bytesSent: number, bytesTotal: number) => void;
+            onSuccess?: () => void;
+          },
+        ) => { start: () => void };
+      };
+    } catch {
+      tusModule = null;
+    }
+    if (!tusModule) {
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', (target as any).signedUrl);
+        xhr.setRequestHeader('Authorization', `Bearer ${(target as any).token}`);
+        xhr.setRequestHeader('x-upsert', 'false');
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable && typeof onProgress === 'function') {
+            const pct = Math.max(0, Math.min(100, Math.round((ev.loaded / ev.total) * 100)));
+            try {
+              onProgress(pct);
+            } catch {}
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed with status ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error('Network error while uploading'));
+        xhr.send(file);
+      });
+      return { ok: true, ref: (target as any).ref as string };
+    }
+    const Upload = tusModule.Upload;
+    await new Promise<void>((resolve, reject) => {
+      const upload = new Upload(file, {
+        endpoint,
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        chunkSize: 6 * 1024 * 1024,
+        metadata: {
+          bucketName: target.bucket,
+          objectName: target.path,
+          contentType: file.type || 'application/octet-stream',
+        },
+        headers: {
+          'x-signature': target.token,
+          'x-upsert': 'false',
+        },
+        removeFingerprintOnSuccess: true,
+        uploadDataDuringCreation: true,
+        onError(err: unknown) {
+          reject(err instanceof Error ? err : new Error('فشل الرفع القابل للاستئناف'));
+        },
+        onProgress(bytesSent: number, bytesTotal: number) {
+          if (typeof onProgress === 'function' && bytesTotal > 0) {
+            const pct = Math.max(0, Math.min(100, Math.round((bytesSent / bytesTotal) * 100)));
+            try {
+              onProgress(pct);
+            } catch {}
+          }
+        },
+        onSuccess() {
+          resolve();
+        },
+      });
+      upload.start();
+    });
+    return { ok: true, ref: target.ref };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'فشل الرفع القابل للاستئناف' };
+  }
+}
+
+async function uploadFileSmart(file: File, onProgress?: (p: number) => void): Promise<{ ok: true; ref: string } | { ok: false; error: string }> {
+  const isVideo =
+    (file.type || '').startsWith('video') ||
+    ['.mp4', '.avi', '.mov', '.webm', '.mkv', '.mpg', '.mpeg'].some((e) => file.name.toLowerCase().endsWith(e));
+  const useResumable = isVideo && file.size >= 50 * 1024 * 1024;
+  if (useResumable) {
+    return await uploadFileResumableTus(file, onProgress);
+  }
+  return await uploadFileDirect(file, onProgress);
+}
+
 function isYouTubeUrl(u: string): boolean {
   const s = String(u ?? '').trim().toLowerCase();
   return s.startsWith('http://') || s.startsWith('https://')
@@ -145,7 +275,7 @@ function AddSessionForm({
       } else {
         const f = selectedFile!;
         const isVideo = (f.type || '').startsWith('video') || ['.mp4', '.avi', '.mov', '.webm', '.mkv', '.mpg', '.mpeg'].some((e) => f.name.toLowerCase().endsWith(e));
-        const sizeLimit = isVideo ? 1024 * 1024 * 500 : 1024 * 1024 * 50;
+        const sizeLimit = isVideo ? 5 * 1024 * 1024 * 1024 : 200 * 1024 * 1024;
         if (f.size > sizeLimit) {
           setFieldErrors((prev) => ({ ...prev, file: isVideo ? 'حجم الفيديو يتجاوز 500MB' : 'حجم الملف يتجاوز 50MB' }));
           setSubmitting(false);
@@ -153,7 +283,7 @@ function AddSessionForm({
         }
         setUploading(true);
         setUploadProgress(0);
-        const resUp = await uploadFileDirect(f, (p) => setUploadProgress(p));
+        const resUp = await uploadFileSmart(f, (p) => setUploadProgress(p));
         setUploading(false);
         setUploadProgress(100);
         if (!resUp.ok) {
@@ -162,6 +292,15 @@ function AddSessionForm({
           return;
         }
         finalUrl = resUp.ref;
+        try {
+          await finalizeUpload({
+            ref: finalUrl,
+            kind: isVideo ? 'video' : 'file',
+            filename: f.name,
+            contentType: f.type || 'application/octet-stream',
+            sizeBytes: f.size,
+          });
+        } catch {}
       }
       const res = await createSession({
         title: title.trim(),
@@ -286,7 +425,7 @@ function AddSessionForm({
                       return;
                     }
                     const isVideo = (f.type || '').startsWith('video');
-                    const sizeLimit = isVideo ? 1024 * 1024 * 500 : 1024 * 1024 * 50;
+                    const sizeLimit = isVideo ? 5 * 1024 * 1024 * 1024 : 200 * 1024 * 1024;
                     if (f.size > sizeLimit) {
                       setFieldErrors((prev) => ({ ...prev, file: isVideo ? 'حجم الفيديو يتجاوز 500MB' : 'حجم الملف يتجاوز 50MB' }));
                       setSelectedFile(null);
@@ -386,7 +525,7 @@ function EditSessionForm({
       } else {
         const f = selectedFile!;
         const isVideo = (f.type || '').startsWith('video') || ['.mp4', '.avi', '.mov', '.webm', '.mkv', '.mpg', '.mpeg'].some((e) => f.name.toLowerCase().endsWith(e));
-        const sizeLimit = isVideo ? 1024 * 1024 * 500 : 1024 * 1024 * 50;
+        const sizeLimit = isVideo ? 5 * 1024 * 1024 * 1024 : 200 * 1024 * 1024;
         if (f.size > sizeLimit) {
           setFieldErrors((prev) => ({ ...prev, file: isVideo ? 'حجم الفيديو يتجاوز 500MB' : 'حجم الملف يتجاوز 50MB' }));
           setSubmitting(false);
@@ -394,7 +533,7 @@ function EditSessionForm({
         }
         setUploading(true);
         setUploadProgress(0);
-        const resUp = await uploadFileDirect(f, (p) => setUploadProgress(p));
+        const resUp = await uploadFileSmart(f, (p) => setUploadProgress(p));
         setUploading(false);
         setUploadProgress(100);
         if (!resUp.ok) {
@@ -403,6 +542,15 @@ function EditSessionForm({
           return;
         }
         content = { url: resUp.ref };
+        try {
+          await finalizeUpload({
+            ref: resUp.ref,
+            kind: isVideo ? 'video' : 'file',
+            filename: f.name,
+            contentType: f.type || 'application/octet-stream',
+            sizeBytes: f.size,
+          });
+        } catch {}
       }
       const res = await updateSession({
         id: session.id,
@@ -522,7 +670,7 @@ function EditSessionForm({
                       return;
                     }
                     const isVideo = (f.type || '').startsWith('video');
-                    const sizeLimit = isVideo ? 1024 * 1024 * 500 : 1024 * 1024 * 50;
+                    const sizeLimit = isVideo ? 5 * 1024 * 1024 * 1024 : 200 * 1024 * 1024;
                     if (f.size > sizeLimit) {
                       setFieldErrors((prev) => ({ ...prev, file: isVideo ? 'حجم الفيديو يتجاوز 500MB' : 'حجم الملف يتجاوز 50MB' }));
                       setSelectedFile(null);
