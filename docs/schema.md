@@ -224,3 +224,13 @@ CREATE TABLE teacher_accounting_settings (
 224→    outcome VARCHAR(20) NOT NULL, -- allowed | redirected | denied
 225→    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 226→);
+جدول تتبع طلاب
+CREATE TABLE student_logins (
+    id BIGSERIAL PRIMARY KEY,
+    student_id BIGINT NOT NULL,
+    logged_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    logged_out_at TIMESTAMP,
+    ip_address INET,
+    CONSTRAINT fk_student_logins_student
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);

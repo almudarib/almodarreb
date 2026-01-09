@@ -167,9 +167,28 @@ function isYouTubeUrl(u: string): boolean {
     : false;
 }
 
-function sanitizeFilename(name: string) {
-  const base = name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return base.length > 180 ? base.slice(-180) : base;
+function guessExt(name: string, type: string): string {
+  const lower = String(name ?? '').toLowerCase();
+  const idx = lower.lastIndexOf('.');
+  if (idx !== -1 && idx < lower.length - 1) {
+    const e = lower.slice(idx + 1);
+    if (e.length <= 10) return e;
+  }
+  const m: Record<string, string> = {
+    'video/mp4': 'mp4',
+    'video/webm': 'webm',
+    'video/x-matroska': 'mkv',
+    'video/x-msvideo': 'avi',
+    'video/quicktime': 'mov',
+    'video/mpeg': 'mpeg',
+    'application/pdf': 'pdf',
+    'application/msword': 'doc',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/vnd.ms-powerpoint': 'ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  };
+  const key = String(type ?? '').toLowerCase();
+  return m[key] ?? 'bin';
 }
 async function uploadFileDirect(file: File, onProgress?: (p: number) => void): Promise<{ ok: true; ref: string } | { ok: false; error: string }> {
   try {
@@ -177,9 +196,9 @@ async function uploadFileDirect(file: File, onProgress?: (p: number) => void): P
     const bucket = 'session-videos';
     const stamp = Date.now();
     const rand = Math.random().toString(36).slice(2);
-    const clean = sanitizeFilename(file.name);
+    const ext = guessExt(file.name, file.type || 'application/octet-stream');
     const folder = `sessions/${new Date().getUTCFullYear()}/${String(new Date().getUTCMonth() + 1).padStart(2, '0')}/${String(new Date().getUTCDate()).padStart(2, '0')}`;
-    const path = `${folder}/${stamp}_${rand}_${clean}`;
+    const path = `${folder}/${stamp}_${rand.slice(0,6)}.${ext}`;
     const { data, error } = await supabase.storage.from(bucket).createSignedUploadUrl(path);
     if (error || !data?.signedUrl || !data?.token) {
       const up = await supabase.storage.from(bucket).upload(path, file, {

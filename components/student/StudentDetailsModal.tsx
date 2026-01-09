@@ -7,7 +7,7 @@ import StudentProgress from '@/components/student/StudentProgress';
 import type { StudentProgressData } from '@/app/actions/students';
 import type { StudentLoginEvent } from '@/app/actions/students';
 import { useRouter } from 'next/navigation';
-import { Box, Stack, Typography, Paper } from '@mui/material';
+import { Box, Stack, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -117,6 +117,21 @@ export function StudentDetailsModal({
     } else {
       alert(r.error);
     }
+  }
+
+  function formatDate(value: string | null): string {
+    if (!value) return '--';
+    const d = new Date(String(value));
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(d.getFullYear());
+    const h24 = d.getHours();
+    const isPm = h24 >= 12;
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    const hh = String(h12).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    const suffix = isPm ? 'م' : 'ص';
+    return `${dd}-${mm}-${yyyy}  ${hh}:${mi}${suffix}`;
   }
 
   return (
@@ -243,19 +258,30 @@ export function StudentDetailsModal({
                 {loginLoading ? (
                   <Typography variant="body2" sx={{ color: 'var(--neutral-600)' }}>جاري التحميل...</Typography>
                 ) : (
-                  <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-                    {loginHistory && loginHistory.length > 0 ? (
-                      loginHistory.map((ev, idx) => (
-                        <Box key={idx} component="li" sx={{ borderTop: idx ? '1px solid var(--neutral-200)' : 'none', py: 1 }}>
-                          <Typography variant="body2">{new Date(ev.opened_at).toLocaleString('ar-EG')}</Typography>
-                        </Box>
-                      ))
-                    ) : (
-                      <Box component="li" sx={{ py: 1 }}>
-                        <Typography variant="body2">لا توجد سجلات</Typography>
-                      </Box>
-                    )}
-                  </Box>
+                  <Table size="small" stickyHeader>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>وقت الدخول</TableCell>
+                        <TableCell>وقت الخروج</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {loginHistory && loginHistory.length > 0 ? (
+                        loginHistory.map((ev) => (
+                          <TableRow key={ev.id}>
+                            <TableCell>{formatDate(ev.logged_in_at)}</TableCell>
+                            <TableCell>{ev.logged_out_at ? formatDate(ev.logged_out_at) : '--'}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={2}>
+                            <Typography variant="body2">لا توجد سجلات</Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 )}
               </Paper>
             ) : null}

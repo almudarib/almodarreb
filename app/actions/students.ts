@@ -1139,8 +1139,10 @@ export async function getStudentProgress(
 }
 
 export type StudentLoginEvent = {
-  opened_at: string;
-  duration_minutes: number | null;
+  id: number;
+  logged_in_at: string;
+  logged_out_at: string | null;
+  ip_address: string | null;
 };
 
 export async function getStudentLoginHistory(
@@ -1172,18 +1174,20 @@ export async function getStudentLoginHistory(
       }
     }
     const { data, error } = await supabase
-      .from('student_sessions')
-      .select('opened_at,duration_minutes')
+      .from('student_logins')
+      .select('id,student_id,logged_in_at,logged_out_at,ip_address')
       .eq('student_id', studentId)
-      .order('opened_at', { ascending: false });
+      .order('logged_in_at', { ascending: false });
     if (error) {
       return { ok: false, error: error.message, details: error };
     }
     const events: StudentLoginEvent[] = (data ?? []).map((row) => {
       const r = (row as unknown) as Record<string, unknown>;
       return {
-        opened_at: r.opened_at as string,
-        duration_minutes: (r.duration_minutes as number | null) ?? null,
+        id: r.id as number,
+        logged_in_at: r.logged_in_at as string,
+        logged_out_at: (r.logged_out_at as string | null) ?? null,
+        ip_address: (r.ip_address as string | null) ?? null,
       };
     });
     return { ok: true, events };
