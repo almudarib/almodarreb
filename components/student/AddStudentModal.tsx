@@ -26,6 +26,7 @@ export function AddStudentModal({ open, onClose, defaultTeacherId, lockTeacher }
     national_id: '',
     exam_datetime: '',
     notes: '',
+    language: 'ar',
     show_exams: true,
     teacher_id: defaultTeacherId ?? 0,
   });
@@ -65,6 +66,7 @@ export function AddStudentModal({ open, onClose, defaultTeacherId, lockTeacher }
       national_id: form.national_id,
       exam_datetime: form.exam_datetime || undefined,
       notes: form.notes || undefined,
+      language: form.language,
       show_exams: form.show_exams,
       teacher_id: Number(form.teacher_id),
     };
@@ -136,6 +138,20 @@ export function AddStudentModal({ open, onClose, defaultTeacherId, lockTeacher }
                 aria-label="ملاحظة"
               />
               {errors.notes ? <Typography variant="caption" color="error">{errors.notes}</Typography> : null}
+            </Box>
+            <Box>
+              <Label>اللغة</Label>
+              <Input
+                select
+                value={form.language}
+                onChange={(e) => setField('language', String(e.target.value))}
+                aria-label="اللغة"
+              >
+                <MenuItem value="ar">العربية</MenuItem>
+                <MenuItem value="en">English</MenuItem>
+                <MenuItem value="tr">التركية</MenuItem>
+              </Input>
+              {errors.language ? <Typography variant="caption" color="error">{errors.language}</Typography> : null}
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Checkbox

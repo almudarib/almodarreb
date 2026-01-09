@@ -23,7 +23,7 @@ function AddExamForm({
   formId?: string;
 }) {
   const [title, setTitle] = React.useState('');
-  const [language, setLanguage] = React.useState<'AR' | 'EN' | ''>('');
+  const [language, setLanguage] = React.useState<'ar' | 'en' | 'tr' | ''>('');
   const [duration, setDuration] = React.useState<number | ''>('');
   const [isActive, setIsActive] = React.useState(true);
 
@@ -104,14 +104,15 @@ function AddExamForm({
                 label="اللغة"
                 select
                 value={language}
-                onChange={(e) => setLanguage(e.target.value as 'AR' | 'EN')}
+                onChange={(e) => setLanguage(e.target.value as 'ar' | 'en' | 'tr')}
                 required
                 fullWidth
                 error={!!fieldErrors.language}
                 helperText={fieldErrors.language}
               >
-                <MenuItem value="AR">AR</MenuItem>
-                <MenuItem value="EN">EN</MenuItem>
+                <MenuItem value="ar">العربية</MenuItem>
+                <MenuItem value="en">الإنجليزية</MenuItem>
+                <MenuItem value="tr">التركية</MenuItem>
               </Input>
             </Box>
             <Box>
@@ -162,7 +163,7 @@ function ExamsTable() {
   const [error, setError] = React.useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [languageFilter, setLanguageFilter] = React.useState<'all' | 'AR' | 'EN'>('all');
+  const [languageFilter, setLanguageFilter] = React.useState<'all' | 'ar' | 'en' | 'tr'>('all');
   const [sortBy, setSortBy] = React.useState<'created_at' | 'title'>('created_at');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
   const page = 1;
@@ -233,13 +234,14 @@ function ExamsTable() {
               select
               aria-label="تصفية اللغة"
               value={languageFilter}
-              onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'AR' | 'EN')}
+              onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'ar' | 'en' | 'tr')}
               size="small"
               sx={{ minWidth: 140 }}
             >
               <MenuItem value="all">الكل</MenuItem>
-              <MenuItem value="AR">AR</MenuItem>
-              <MenuItem value="EN">EN</MenuItem>
+              <MenuItem value="ar">العربية</MenuItem>
+              <MenuItem value="en">الإنجليزية</MenuItem>
+              <MenuItem value="tr">التركية</MenuItem>
             </Input>
           </Stack>
         </Box>
@@ -251,7 +253,14 @@ function ExamsTable() {
             {
               id: 'language',
               label: 'اللغة',
-              render: (e: ExamRecord) => <Chip label={String(e.language).toUpperCase()} size="small" />,
+              render: (e: ExamRecord) => (
+                <Chip
+                  label={
+                    e.language === 'ar' ? 'العربية' : e.language === 'tr' ? 'التركية' : 'الإنجليزية'
+                  }
+                  size="small"
+                />
+              ),
             },
             {
               id: 'duration',

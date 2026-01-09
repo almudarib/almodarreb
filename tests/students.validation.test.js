@@ -7,6 +7,7 @@ test('validateAddStudentInput: valid with existing auth_user_id', () => {
   const input = {
     name: 'Student One',
     national_id: '1234567890',
+    language: 'ar',
     teacher_id: 1,
     status: 'active',
     show_exams: true,
@@ -28,6 +29,7 @@ test('validateAddStudentInput: invalid national_id', () => {
   const input = {
     name: 'x',
     national_id: 'ABC123',
+    language: 'ar',
     teacher_id: 1,
     auth: { auth_user_id: '8d3f4b2a-5c66-4a4d-9a2a-8f0b2cbceaaa' },
   };
@@ -40,6 +42,7 @@ test('validateAddStudentInput: create_auth path', () => {
   const input = {
     name: 'Student Two',
     national_id: '123456789012',
+    language: 'en',
     teacher_id: 2,
     auth: { create_auth: { email: 's2@example.com', password: 'longpass123' } },
   };
@@ -49,6 +52,19 @@ test('validateAddStudentInput: create_auth path', () => {
     email: 's2@example.com',
     password: 'longpass123',
   });
+});
+
+test('validateAddStudentInput: supports turkish language', () => {
+  const input = {
+    name: 'Student Three',
+    national_id: '123456789012',
+    language: 'tr',
+    teacher_id: 3,
+    auth: { auth_user_id: '8d3f4b2a-5c66-4a4d-9a2a-8f0b2cbceaaa' },
+  };
+  const r = validateAddStudentInput(input);
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(r.value.language, 'tr');
 });
 
 test('validateListStudentsQuery: defaults and normalization', () => {

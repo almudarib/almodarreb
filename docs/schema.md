@@ -1,3 +1,7 @@
+0️⃣ أنواع ENUM
+CREATE TYPE language_type AS ENUM ('ar','en');
+ALTER TYPE language_type ADD VALUE IF NOT EXISTS 'tr';
+
 1️⃣ جدول USERS (Profile مرتبط بـ Auth)
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,

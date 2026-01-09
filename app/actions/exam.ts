@@ -35,11 +35,13 @@ export async function createExam(
 ): Promise<{ ok: true; exam: ExamRecord } | { ok: false; error: string; details?: unknown }> {
   try {
     const title = String(input?.title ?? '').trim();
-    const language = String(input?.language ?? '').trim();
+    const langRaw = String(input?.language ?? '').trim().toLowerCase();
+    const allowed = ['ar', 'en', 'tr'] as const;
+    const language = allowed.includes(langRaw as any) ? langRaw : '';
     const duration = Number(input?.duration_minutes ?? 0);
     const isActive = input?.is_active ?? true;
     if (!title) return { ok: false, error: 'العنوان مطلوب' };
-    if (!language) return { ok: false, error: 'اللغة مطلوبة' };
+    if (!language) return { ok: false, error: 'اللغة غير مدعومة' };
     if (!Number.isInteger(duration) || duration <= 0)
       return { ok: false, error: 'المدة يجب أن تكون عددًا صحيحًا موجبًا' };
 
@@ -91,7 +93,14 @@ export async function updateExam(
     const supabase = createAdminClient();
     const payload: Record<string, unknown> = {};
     if (input.title !== undefined) payload.title = String(input.title).trim();
-    if (input.language !== undefined) payload.language = String(input.language).trim();
+    if (input.language !== undefined) {
+      const langRaw = String(input.language).trim().toLowerCase();
+      const allowed = ['ar', 'en', 'tr'] as const;
+      if (!allowed.includes(langRaw as any)) {
+        return { ok: false, error: 'اللغة غير مدعومة', details: { language: input.language } };
+      }
+      payload.language = langRaw;
+    }
     if (input.duration_minutes !== undefined) payload.duration_minutes = Number(input.duration_minutes);
     if (input.is_active !== undefined) payload.is_active = !!input.is_active;
     if (Object.keys(payload).length === 0) return { ok: true };
@@ -156,7 +165,13 @@ export async function listExams(
     let builder = supabase
       .from('exams')
       .select('id,title,language,duration_minutes,is_active,created_at', { count: 'exact' });
-    if (query.language) builder = builder.eq('language', String(query.language).trim());
+    if (query.language) {
+      const lang = String(query.language).trim().toLowerCase();
+      const allowed = ['ar', 'en', 'tr'];
+      if (allowed.includes(lang)) {
+        builder = builder.eq('language', lang);
+      }
+    }
     if (query.is_active !== undefined) builder = builder.eq('is_active', !!query.is_active);
     if (query.search) {
       const term = String(query.search).trim().replace(/%/g, '\\%').replace(/_/g, '\\_');

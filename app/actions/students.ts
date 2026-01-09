@@ -31,6 +31,7 @@ export type AddStudentInput = {
   notes?: string;
   status?: string;
   show_exams?: boolean;
+  language: string;
   teacher_id: number;
   auth?: { auth_user_id: string } | { create_auth: { email: string; password: string } };
 };
@@ -92,6 +93,7 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
       notes?: string;
       status?: string;
       show_exams?: boolean;
+      language: string;
       teacher_id: number;
       create_auth?: { email: string; password: string };
     };
@@ -144,6 +146,7 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
       auth_user_id: authUserId,
       name: payload.name,
       national_id: payload.national_id,
+      language: payload.language,
       teacher_id: payload.teacher_id,
       start_date,
       registration_date,
