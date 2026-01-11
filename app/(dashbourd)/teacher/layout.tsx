@@ -8,11 +8,12 @@ import { DashboardRounded, SchoolRounded, SettingsRounded, PaidRounded } from '@
 import { LogoutButton } from '@/components/logout-button';
 
 const PALETTE = {
-  deepTeal: '#088395',
-  gold: '#E19800',
-  darkOlive: '#1A1D0F',
-  sidebarBg: '#12140B',
-  activeLight: 'rgba(8, 131, 149, 0.15)',
+  primary: 'var(--brand-teal)',
+  gold: 'var(--brand-gold)',
+  dark: 'var(--brand-dark)',
+  sidebarBg: 'var(--brand-teal)',
+  activeLight: 'var(--brand-teal-13)',
+  goldDark: 'var(--brand-gold-dark)',
 };
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +26,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', direction: 'rtl', bgcolor: '#F0F2F5' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', direction: 'rtl', bgcolor: 'var(--brand-light-bg)' }}>
       <Box
         component="aside"
         sx={{
@@ -43,7 +44,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       >
         <Box sx={{ p: 3, mb: 2 }}>
           <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-            <Avatar sx={{ bgcolor: PALETTE.deepTeal, width: 45, height: 45, fontWeight: 'bold' }}>T</Avatar>
+            <Avatar sx={{ bgcolor: PALETTE.primary, width: 45, height: 45, fontWeight: 'bold' }}>T</Avatar>
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, color: 'white' }}>
                 لوحة <span style={{ color: PALETTE.gold }}>الأستاذ</span>
@@ -74,9 +75,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                     py: 1.2,
                     transition: 'all 0.2s ease-in-out',
                     '&.Mui-selected': {
-                      bgcolor: PALETTE.deepTeal,
+                      bgcolor: PALETTE.goldDark,
                       color: 'white',
-                      '&:hover': { bgcolor: PALETTE.deepTeal },
+                      '&:hover': { bgcolor: PALETTE.goldDark },
                       '& .MuiListItemIcon-root': { color: 'white' },
                     },
                     '&:hover': {
@@ -141,7 +142,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             borderBottom: '1px solid #E0E0E0',
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 700, color: PALETTE.darkOlive }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: PALETTE.primary }}>
             {links.find((l) => pathname.startsWith(l.href))?.label || 'لوحة الأستاذ'}
           </Typography>
         </Box>

@@ -7,6 +7,7 @@ import * as React from "react";
 
 export function LogoutButton({
   label = "تسجيل الخروج",
+  sx,
   ...props
 }: Omit<ButtonProps, "onClick"> & { label?: React.ReactNode }) {
   const router = useRouter();
@@ -20,18 +21,31 @@ export function LogoutButton({
   return (
     <Button
       onClick={logout}
-      variant="outlined"
-      color="error"
-      sx={{
-        '&.MuiButton-outlined': {
-          borderColor: '#D32F2F',
-          color: '#D32F2F',
-          '&:hover': {
-            borderColor: '#B71C1C',
-            backgroundColor: 'rgba(211,47,47,0.08)',
-          },
-        },
-      }}
+      variant="contained"
+      sx={
+        sx
+          ? [
+              {
+                '&.MuiButton-contained': {
+                  bgcolor: 'var(--brand-gold-dark)',
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: 'var(--brand-gold-dark)',
+                  },
+                },
+              },
+              ...(Array.isArray(sx) ? sx : [sx]),
+            ]
+          : {
+              '&.MuiButton-contained': {
+                bgcolor: 'var(--brand-gold-dark)',
+                color: 'white',
+                '&:hover': {
+                  bgcolor: 'var(--brand-gold-dark)',
+                },
+              },
+            }
+      }
       {...props}
     >
       {label}
