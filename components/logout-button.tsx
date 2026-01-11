@@ -4,12 +4,14 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import * as React from "react";
+import { LogoutRounded } from "@mui/icons-material";
 
 export function LogoutButton({
   label = "تسجيل الخروج",
+  isCollapsed,
   sx,
   ...props
-}: Omit<ButtonProps, "onClick"> & { label?: React.ReactNode }) {
+}: Omit<ButtonProps, "onClick"> & { label?: React.ReactNode; isCollapsed?: boolean }) {
   const router = useRouter();
 
   const logout = async () => {
@@ -21,7 +23,6 @@ export function LogoutButton({
   return (
     <Button
       onClick={logout}
-      variant="contained"
       sx={
         sx
           ? [
@@ -32,6 +33,10 @@ export function LogoutButton({
                   '&:hover': {
                     bgcolor: 'var(--brand-gold-dark)',
                   },
+                },
+                '&.MuiButton-text': {
+                  color: 'white',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
                 },
               },
               ...(Array.isArray(sx) ? sx : [sx]),
@@ -44,11 +49,15 @@ export function LogoutButton({
                   bgcolor: 'var(--brand-gold-dark)',
                 },
               },
+              '&.MuiButton-text': {
+                color: 'white',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+              },
             }
       }
       {...props}
     >
-      {label}
+      {isCollapsed ? <LogoutRounded fontSize="small" /> : label}
     </Button>
   );
 }
