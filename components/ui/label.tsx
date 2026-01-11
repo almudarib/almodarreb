@@ -8,7 +8,11 @@ export function Label({ sx, ...rest }: LabelProps) {
   const defaultSx = {
     color: 'var(--brand-dark)',
     fontWeight: 600,
-    mb: 1
+    mb: 1,
+    direction: 'rtl',
+    textAlign: 'right',
+    display: 'block',
+    width: '100%'
   } as const;
   const mergedSx = sx ? [defaultSx, ...(Array.isArray(sx) ? sx : [sx])] : defaultSx;
   return <InputLabel sx={mergedSx} {...rest} />;

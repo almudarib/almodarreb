@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { 
   Alert, Box, Container, FormControl, FormHelperText, IconButton, 
-  MenuItem, Select, Snackbar, Stack, Typography, Paper, Chip, Divider 
+  MenuItem, Select, Snackbar, Stack, Typography, Paper, Chip, Divider, TextField 
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Form } from '@/components/ui/Form';
 import { Menu } from '@/components/ui/Menu';
 import { Table } from '@/components/ui/Table';
-import { MoreVert, PersonAddAlt1, FilterList, Search } from '@mui/icons-material';
+import { MoreVert, PersonAddAlt1, FilterList, Search, PeopleAltRounded } from '@mui/icons-material';
 import {
   createUser,
   listAllUsersSummary,
@@ -57,66 +57,121 @@ function AddUserForm({ onCreated, formId }: { onCreated: () => void; formId?: st
   return (
     <Box sx={{ p: 1 }}>
       {error && <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>{error}</Alert>}
-      <Form id={formId} onSubmit={handleSubmit}>
-        <Stack spacing={3}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2.5 }}>
-            <FormControl fullWidth error={!!fieldErrors.kind}>
-              <Label sx={{ mb: 1, fontWeight: 600 }}>نوع المستخدم</Label>
-              <Select
-                value={kind}
-                onChange={(e) => setKind(e.target.value as UserKind)}
-                sx={{ borderRadius: '10px', bgcolor: 'var(--brand-white)' }}
-                displayEmpty
-              >
-                <MenuItem value="" disabled>اختر النوع...</MenuItem>
-                <MenuItem value="teacher">معلّم (Teacher)</MenuItem>
-                <MenuItem value="admin">مسؤول (Admin)</MenuItem>
-              </Select>
-            </FormControl>
+<Form id={formId} onSubmit={handleSubmit}>
+  <Stack spacing={4} sx={{ p: 1 }}>
+    {/* عنوان فرعي للنموذج لزيادة الوضوح */}
+    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: -2, fontWeight: 500, textAlign: 'right', direction: 'rtl' }}>
+      الرجاء إدخال بيانات الحساب الجديدة بدقة
+    </Typography>
 
-            <Box>
-              <Label sx={{ mb: 1, fontWeight: 600 }}>الاسم الكامل</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="أدخل الاسم الثلاثي"
-                className="focus:ring-[var(--brand-teal)] border-[var(--neutral-200)]"
-              />
-            </Box>
+    <Box 
+      sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, 
+        gap: 3 
+      }}
+    >
+      {/* نوع المستخدم - مع خلفية خفيفة لتمييزه كحقل أساسي */}
+      <FormControl fullWidth error={!!fieldErrors.kind} sx={{ gridColumn: { md: '1 / span 2' } }}>
+        <Label sx={{ mb: 5, fontWeight: 700, color: 'var(--brand-dark)', display: 'flex', alignItems: 'center', gap: 1, flexDirection: 'row-reverse' }}>
+          <PeopleAltRounded sx={{ fontSize: 20, color: 'var(--brand-teal)' }} />
+          نوع المستخدم
+        </Label>
+        <Select
+          value={kind}
+          onChange={(e) => setKind(e.target.value as UserKind)}
+          sx={{ 
+            borderRadius: '12px', 
+            bgcolor: '#f8fafc', 
+            '& .MuiOutlinedInput-notchedOutline': { border: '1px solid #e2e8f0' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--brand-teal)' },
+            direction: 'rtl',
+          }}
+          MenuProps={{ PaperProps: { sx: { direction: 'rtl' } } }}
+          displayEmpty
+        >
+          <MenuItem value="teacher">معلّم </MenuItem>
+          <MenuItem value="admin">مسؤول </MenuItem>
+        </Select>
+      </FormControl>
 
-            <Box>
-              <Label sx={{ mb: 1, fontWeight: 600 }}>البريد الإلكتروني</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@mail.com"
-              />
-            </Box>
+      {/* الاسم الكامل */}
+      <Box>
+        <Label sx={{ mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          الاسم الكامل
+        </Label>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="أدخل الاسم الثلاثي"
+          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--brand-teal)] focus:border-transparent transition-all outline-none"
+          inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+        />
+      </Box>
 
-            <Box>
-              <Label sx={{ mb: 1, fontWeight: 600 }}>كلمة المرور</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="******"
-              />
-            </Box>
+      {/* البريد الإلكتروني */}
+      <Box>
+        <Label sx={{ mb: 1, fontWeight: 600 }}>البريد الإلكتروني</Label>
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="example@mail.com"
+          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--brand-teal)] transition-all outline-none"
+           inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+        />
+      </Box>
 
-            {kind === 'teacher' && (
-              <Box>
-                <Label sx={{ mb: 1, fontWeight: 600 }}>القيمة لكل طالب (USD)</Label>
-                <Input
-                  type="number"
-                  value={defaultFee}
-                  onChange={(e) => setDefaultFee(e.target.value)}
-                />
-              </Box>
-            )}
-          </Box>
-        </Stack>
-      </Form>
+      {/* كلمة المرور */}
+      <Box>
+        <Label sx={{ mb: 1, fontWeight: 600 }}>كلمة المرور</Label>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="******"
+          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--brand-teal)] transition-all outline-none"
+          inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+        />
+      </Box>
+
+      {/* الحقل الشرطي للمدرس - مع حركة دخول (Fade In) */}
+      {kind === 'teacher' && (
+        <Box 
+          sx={{ 
+            animation: 'fadeIn 0.4s ease-out',
+            bgcolor: 'var(--brand-teal-5)', // لون خلفية خفيف جداً للتنبيه
+            p: 2,
+            borderRadius: '12px',
+            border: '1px dashed var(--brand-teal)',
+            gridColumn: { md: 'span 1' }
+          }}
+        >
+          <Label sx={{ mb: 1, fontWeight: 700, color: 'var(--brand-teal)' }}>القيمة لكل طالب بالدولار</Label>
+          <Input
+            type="number"
+            value={defaultFee}
+            onChange={(e) => setDefaultFee(e.target.value)}
+            className="w-full px-4 py-2 rounded-lg border-none bg-white shadow-sm outline-none focus:ring-2 focus:ring-[var(--brand-teal)]"
+            placeholder="0.00"
+            inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+          />
+          <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
+            سيتم احتساب هذه القيمة تلقائياً عند تسجيل طلاب جدد مع هذا المعلم.
+          </Typography>
+        </Box>
+      )}
+    </Box>
+
+    {/* CSS Animation */}
+    <style dangerouslySetInnerHTML={{ __html: `
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `}} />
+  </Stack>
+</Form>
     </Box>
   );
 }
@@ -131,6 +186,13 @@ function UsersTable() {
   const [menuUser, setMenuUser] = React.useState<null | UserSummary>(null);
   const [editOpen, setEditOpen] = React.useState(false);
   const [selectedDetails, setSelectedDetails] = React.useState<UserDetails | null>(null);
+  const [editName, setEditName] = React.useState('');
+  const [editEmail, setEditEmail] = React.useState('');
+  const [editPassword, setEditPassword] = React.useState('');
+  const [editKind, setEditKind] = React.useState<UserKind>('teacher');
+  const [editSubmitting, setEditSubmitting] = React.useState(false);
+  const [editMessage, setEditMessage] = React.useState<string | null>(null);
+  const [editError, setEditError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -142,80 +204,136 @@ function UsersTable() {
   React.useEffect(() => { load(); }, [load]);
 
   const visibleUsers = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const match = (u: UserSummary) => {
+      if (!q) return true;
+      const nameMatch = u.name.toLowerCase().includes(q);
+      const emailMatch = u.email.toLowerCase().includes(q);
+      const roleText = u.kind === 'admin'
+        ? 'admin مدير ادمن مسؤول'
+        : 'teacher معلم معلّم أستاذ استاذ';
+      const roleMatch = roleText.includes(q);
+      return nameMatch || emailMatch || roleMatch;
+    };
     return users
       .filter(u => roleFilter === 'all' || u.kind === roleFilter)
-      .filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()))
+      .filter(match)
       .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   }, [users, roleFilter, searchQuery]);
 
+  async function openEdit(u: UserSummary) {
+    setMenuAnchor(null);
+    const res = await getUserDetails(u.kind, u.id);
+    if (!res.ok) return;
+    setSelectedDetails(res.user);
+    setEditName(u.name);
+    setEditEmail(u.email);
+    setEditPassword('');
+    setEditKind(u.kind);
+    setEditOpen(true);
+  }
+
   return (
-    <Paper sx={{ borderRadius: '16px', overflow: 'hidden', boxShadow: '0 10px 30px var(--black-03)', border: '1px solid var(--neutral-300)' }}>
-      {/* Table Header / Filters */}
-      <Box sx={{ p: 3, borderBottom: '1px solid var(--neutral-200)', bgcolor: 'var(--brand-white)' }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center" justifyContent="space-between">
+    <Paper sx={{ 
+      borderRadius: '20px', 
+      overflow: 'hidden', 
+      boxShadow: '0 4px 20px rgba(0,0,0,0.08)', 
+      border: '1px solid var(--neutral-200)',
+      bgcolor: 'white'
+    }}>
+      {/* شريط الأدوات العلوي */}
+      <Box sx={{ p: 3, bgcolor: '#fcfcfc', borderBottom: '1px solid var(--neutral-100)' }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="center" justifyContent="space-between">
+          
+          {/* قسم الفلترة */}
           <Stack direction="row" spacing={1} alignItems="center">
-            <FilterList sx={{ color: 'var(--brand-teal)' }} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}>تصفية:</Typography>
-            {['all', 'admin', 'teacher'].map((role) => (
-              <Chip
-                key={role}
-                label={role === 'all' ? 'الكل' : role === 'admin' ? 'المدراء' : 'المعلمون'}
-                onClick={() => setRoleFilter(role as any)}
-                sx={{
-                  fontWeight: 600,
-                  bgcolor: roleFilter === role ? 'var(--brand-teal)' : 'transparent',
-                  color: roleFilter === role ? 'var(--brand-white)' : 'var(--brand-dark)',
-                  border: `${'1px solid '}${roleFilter === role ? 'var(--brand-teal)' : 'var(--neutral-400)'}`,
-                  '&:hover': { bgcolor: roleFilter === role ? 'var(--brand-teal)' : 'var(--neutral-100)' }
-                }}
-              />
-            ))}
+
+            <Stack direction="row" spacing={1} sx={{ bgcolor: 'var(--neutral-100)', p: 0.5, borderRadius: '12px' }}>
+              {['all', 'admin', 'teacher'].map((role) => (
+                <Box
+                  key={role}
+                  onClick={() => setRoleFilter(role as any)}
+                  sx={{
+                    px: 2,
+                    py: 0.8,
+                    cursor: 'pointer',
+                    borderRadius: '10px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    transition: '0.2s',
+                    bgcolor: roleFilter === role ? 'white' : 'transparent',
+                    color: roleFilter === role ? 'var(--brand-teal)' : 'var(--neutral-600)',
+                    boxShadow: roleFilter === role ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                    '&:hover': { color: 'var(--brand-teal)' }
+                  }}
+                >
+                  {role === 'all' ? 'الكل' : role === 'admin' ? 'المدراء' : 'المعلمون'}
+                </Box>
+              ))}
+            </Stack>
           </Stack>
           
-          <Box sx={{ position: 'relative', width: { xs: '100%', md: '300px' } }}>
-            <Search sx={{ position: 'absolute', right: 12, top: 10, color: 'var(--neutral-500)' }} />
-            <Input
-              placeholder="ابحث عن اسم أو بريد..."
+          {/* محرك البحث */}
+          <Box sx={{ width: { xs: '100%', md: '320px' } }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              size="small"
+              placeholder="ابحث بالاسم أو الدور أو البريد..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10 border-[var(--neutral-200)] focus:border-[var(--brand-teal)] rounded-full"
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: <Search sx={{ color: 'var(--neutral-400)', mr: 1, ml: 0 }} />,
+                sx: { 
+                  borderRadius: '12px', 
+                  bgcolor: 'white',
+                  '& fieldset': { borderColor: 'var(--neutral-200)' },
+                  '&:hover fieldset': { borderColor: 'var(--brand-teal) !important' }
+                }
+              }}
             />
           </Box>
         </Stack>
       </Box>
 
-      {/* The Table */}
+      {/* الجدول */}
       <Table
         columns={[
           {
             id: 'name',
             label: 'المستخدم',
             render: (u) => (
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: u.kind === 'admin' ? 'var(--brand-gold-13)' : 'var(--brand-teal-13)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: u.kind === 'admin' ? 'var(--brand-gold)' : 'var(--brand-teal)' }}>
-                  {u.name.charAt(0)}
-                </Box>
-                <Box>
-                  <Typography sx={{ fontWeight: 600, color: 'var(--brand-dark)', fontSize: '0.95rem' }}>{u.name}</Typography>
-                  <Typography variant="caption" sx={{ color: 'var(--neutral-600)' }}>ID: #{u.id}</Typography>
-                </Box>
-              </Stack>
+              <Typography sx={{ fontWeight: 700, color: 'var(--brand-dark)', fontSize: '0.9rem' }}>
+                {u.name}
+              </Typography>
             )
           },
-          { id: 'email', label: 'البريد الإلكتروني' },
+          { 
+            id: 'email', 
+            label: 'البريد الإلكتروني',
+            render: (u) => (
+              <Typography sx={{ color: 'var(--neutral-600)', fontSize: '0.85rem' }}>
+                {u.email}
+              </Typography>
+            )
+          },
           {
             id: 'kind',
-            label: 'الدور',
+            label: 'نوع الحساب',
             render: (u) => (
-              <Chip 
-                label={u.kind === 'admin' ? 'مدير' : 'معلّم'} 
-                size="small"
-                sx={{ 
-                  bgcolor: u.kind === 'admin' ? 'var(--brand-dark)' : 'var(--neutral-200)', 
-                  color: u.kind === 'admin' ? 'var(--brand-white)' : 'var(--brand-dark)',
-                  fontWeight: 700 
-                }} 
-              />
+              <Box sx={{ 
+                display: 'inline-flex',
+                px: 1.5, 
+                py: 0.5, 
+                borderRadius: '6px', 
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                bgcolor: u.kind === 'admin' ? 'var(--brand-dark)' : '#f0f0f0', 
+                color: u.kind === 'admin' ? 'white' : '#555',
+                textTransform: 'uppercase'
+              }}>
+                {u.kind === 'admin' ? 'ادمن' : 'معلّم'}
+              </Box>
             )
           },
           {
@@ -223,7 +341,10 @@ function UsersTable() {
             label: '',
             align: 'right',
             render: (u) => (
-              <IconButton onClick={(e) => { setMenuAnchor(e.currentTarget); setMenuUser(u); }}>
+              <IconButton 
+                onClick={(e) => { setMenuAnchor(e.currentTarget); setMenuUser(u); }}
+                sx={{ '&:hover': { bgcolor: 'var(--neutral-100)', color: 'var(--brand-teal)' } }}
+              >
                 <MoreVert />
               </IconButton>
             )
@@ -232,17 +353,103 @@ function UsersTable() {
         data={visibleUsers}
         loading={loading}
         getRowId={(u) => `${u.kind}-${u.id}`}
+        // إضافة تنسيق لصفوف الجدول (اختياري)
+        sx={{
+          '& .MuiTableCell-root': { py: 2, borderBottom: '1px solid var(--neutral-100)' },
+          '& .MuiTableRow-root:hover': { bgcolor: '#f9f9f9' }
+        }}
       />
 
       <Menu
         anchorEl={menuAnchor}
         open={!!menuAnchor}
         onClose={() => setMenuAnchor(null)}
+        PaperProps={{
+          sx: { 
+            boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+            borderRadius: '12px',
+            minWidth: 160,
+            border: '1px solid var(--neutral-100)'
+          }
+        }}
         items={[
-          { label: 'تعديل البيانات', onClick: () => { setEditOpen(true); setMenuAnchor(null); } },
+          { label: 'تعديل البيانات', onClick: () => { if (menuUser) openEdit(menuUser); } },
           { label: 'حذف الحساب', onClick: () => { /* Logic delete */ }, tone: 'error' },
         ]}
       />
+
+      {/* نافذة تعديل المستخدم */}
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onCancel={() => setEditOpen(false)}
+        title="تعديل المستخدم"
+        submitText={editSubmitting ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}
+        onSubmit={async () => {
+          if (!selectedDetails) return;
+          setEditSubmitting(true);
+          setEditError(null);
+          const res = await updateUser({
+            id: selectedDetails.id,
+            kind: editKind,
+            name: editName,
+            email: editEmail,
+            password: editPassword || undefined,
+          });
+          setEditSubmitting(false);
+          if (res.ok) {
+            setEditOpen(false);
+            setEditMessage('تم حفظ التعديلات بنجاح');
+            load();
+          } else {
+            setEditError(res.error ?? 'فشلت عملية التعديل');
+          }
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <Box sx={{ p: 2 }}>
+          <Stack spacing={2}>
+            <Label>الاسم الكامل</Label>
+            <Input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+            />
+            <Label>البريد الإلكتروني</Label>
+            <Input
+              type="email"
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+            />
+            <Label>كلمة المرور (اختياري)</Label>
+            <Input
+              type="password"
+              value={editPassword}
+              onChange={(e) => setEditPassword(e.target.value)}
+              placeholder="اتركها فارغة إن لم ترغب بالتغيير"
+              inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+            />
+            <Label>نوع المستخدم</Label>
+            <Select
+              value={editKind}
+              onChange={(e) => setEditKind(e.target.value as UserKind)}
+              sx={{ borderRadius: '12px', direction: 'rtl' }}
+              displayEmpty
+            >
+              <MenuItem value="teacher">معلّم</MenuItem>
+              <MenuItem value="admin">ادمن</MenuItem>
+            </Select>
+          </Stack>
+        </Box>
+      </Modal>
+      <Snackbar open={!!editMessage} autoHideDuration={4000} onClose={() => setEditMessage(null)}>
+        <Alert severity="success" variant="filled">{editMessage}</Alert>
+      </Snackbar>
+      <Snackbar open={!!editError} autoHideDuration={5000} onClose={() => setEditError(null)}>
+        <Alert severity="error" variant="filled">{editError}</Alert>
+      </Snackbar>
     </Paper>
   );
 }
@@ -282,6 +489,7 @@ export default function AdminUsersPage() {
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}
+        onCancel={() => setAddOpen(false)}
         title="إنشاء حساب جديد"
         submitText="تأكيد الإضافة"
         cancelText="إلغاء"

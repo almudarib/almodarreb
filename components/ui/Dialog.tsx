@@ -37,8 +37,8 @@ export function Dialog({ title, actions, children, ...rest }: DialogProps) {
       }}
       {...rest}
     >
-      {title ? <DialogTitle sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>{title}</DialogTitle> : null}
-      <DialogContent dividers sx={{ bgcolor: 'var(--brand-white)' }}>{children}</DialogContent>
+      {title ? <DialogTitle sx={{ fontWeight: 800, color: 'var(--brand-dark)', textAlign: 'right', direction: 'rtl' }}>{title}</DialogTitle> : null}
+      <DialogContent dividers sx={{ bgcolor: 'var(--brand-white)', direction: 'rtl' }}>{children}</DialogContent>
       {actions ? <DialogActions>{actions}</DialogActions> : null}
     </MUIDialog>
   );
