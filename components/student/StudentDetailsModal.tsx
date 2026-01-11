@@ -7,11 +7,13 @@ import StudentProgress from '@/components/student/StudentProgress';
 import type { StudentProgressData } from '@/app/actions/students';
 import type { StudentLoginEvent } from '@/app/actions/students';
 import { useRouter } from 'next/navigation';
-import { Box, Stack, Typography, Paper, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
+import { Box, Stack, Typography, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { Dialog } from '@/components/ui/Dialog';
+import { Button } from '@/components/ui/button';
 
 export type StudentDetailsModalProps = {
   open: boolean;
@@ -250,41 +252,41 @@ export function StudentDetailsModal({
                 {loginOpen ? 'إخفاء التعقب' : 'تعقب تسجيلات الدخول'}
               </Typography>
             </Stack>
-            {loginOpen ? (
-              <Paper variant="outlined" sx={{ p: 2, maxHeight: 256, overflowY: 'auto', borderRadius: '12px' }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700, color: 'var(--brand-dark)' }}>
-                  سجل تسجيلات الدخول
-                </Typography>
-                {loginLoading ? (
-                  <Typography variant="body2" sx={{ color: 'var(--neutral-600)' }}>جاري التحميل...</Typography>
-                ) : (
-                  <Table size="small" stickyHeader>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>وقت الدخول</TableCell>
-                        <TableCell>وقت الخروج</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {loginHistory && loginHistory.length > 0 ? (
-                        loginHistory.map((ev) => (
-                          <TableRow key={ev.id}>
-                            <TableCell>{formatDate(ev.logged_in_at)}</TableCell>
-                            <TableCell>{ev.logged_out_at ? formatDate(ev.logged_out_at) : '--'}</TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={2}>
-                            <Typography variant="body2">لا توجد سجلات</Typography>
-                          </TableCell>
+            <Dialog
+              open={loginOpen}
+              onClose={() => setLoginOpen(false)}
+              title="سجل تسجيلات الدخول"
+              actions={<Button variant="outlined" onClick={() => setLoginOpen(false)}>إغلاق</Button>}
+            >
+              {loginLoading ? (
+                <Typography variant="body2" sx={{ color: 'var(--neutral-600)' }}>جاري التحميل...</Typography>
+              ) : (
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>وقت الدخول</TableCell>
+                      <TableCell>وقت الخروج</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loginHistory && loginHistory.length > 0 ? (
+                      loginHistory.map((ev) => (
+                        <TableRow key={ev.id}>
+                          <TableCell>{formatDate(ev.logged_in_at)}</TableCell>
+                          <TableCell>{ev.logged_out_at ? formatDate(ev.logged_out_at) : '--'}</TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </Paper>
-            ) : null}
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={2}>
+                          <Typography variant="body2">لا توجد سجلات</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </Dialog>
             <StudentProgress data={progress} />
           </Stack>
         </Box>

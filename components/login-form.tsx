@@ -16,6 +16,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, LockKeyhole, Mail } from "lucide-react"; // أيقونات إضافية
+import { Facebook, Instagram, WhatsApp, Audiotrack } from "@mui/icons-material";
+import Image from "next/image";
+import logo from "@/app/public/logo.jpeg";
 
 export function LoginForm({
   className,
@@ -54,6 +57,9 @@ export function LoginForm({
         <div className="h-2 bg-gradient-to-r from-[var(--brand-teal)] to-[var(--brand-gold)]" />
         
         <CardHeader className="space-y-1 text-center pt-8">
+          <div className="mx-auto mb-3 flex items-center justify-center">
+            <Image src={logo} alt="Logo" width={64} height={64} className="rounded-lg" />
+          </div>
           <CardTitle className="text-3xl font-black text-[var(--brand-dark)] tracking-tight">
             مرحباً بك مجدداً
           </CardTitle>
@@ -129,6 +135,21 @@ export function LoginForm({
                   "تسجيل الدخول"
                 )}
               </Button>
+              <div className="flex items-center justify-center gap-4 mt-4 text-neutral-600">
+                <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="hover:text-[var(--brand-teal)]">
+                  <Facebook />
+                </a>
+                <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="hover:text-[var(--brand-teal)]">
+                  <Instagram />
+                </a>
+                <a href="https://wa.me" target="_blank" rel="noreferrer" aria-label="WhatsApp" className="hover:text-[var(--brand-teal)]">
+                  <WhatsApp />
+                </a>
+                <a href="https://tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok" className="hover:text-[var(--brand-teal)]">
+                  <Audiotrack />
+                </a>
+              </div>
+              <p className="text-center mt-2 text-sm text-neutral-700">تطبيق المدرب باشراف وادارة ابو تيم</p>
             </div>
           </form>
         </CardContent>
