@@ -12,6 +12,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Modal } from '@/components/ui/Modal';
+import { DeleteWarning } from '@/components/ui/DeleteWarning';
 import { Form } from '@/components/ui/Form';
 import { Menu } from '@/components/ui/Menu';
 import { Table } from '@/components/ui/Table';
@@ -186,6 +187,8 @@ function UsersTable() {
   const [menuUser, setMenuUser] = React.useState<null | UserSummary>(null);
   const [editOpen, setEditOpen] = React.useState(false);
   const [selectedDetails, setSelectedDetails] = React.useState<UserDetails | null>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [pendingDeleteUser, setPendingDeleteUser] = React.useState<UserSummary | null>(null);
   const [editName, setEditName] = React.useState('');
   const [editEmail, setEditEmail] = React.useState('');
   const [editPassword, setEditPassword] = React.useState('');
@@ -374,7 +377,28 @@ function UsersTable() {
         }}
         items={[
           { label: 'تعديل البيانات', onClick: () => { if (menuUser) openEdit(menuUser); } },
-          { label: 'حذف الحساب', onClick: () => { /* Logic delete */ }, tone: 'error' },
+          { 
+            label: 'حذف الحساب', 
+            onClick: async () => { 
+              if (!menuUser) return;
+              setMenuAnchor(null);
+              if (menuUser.kind === 'teacher') {
+                setPendingDeleteUser(menuUser);
+                setDeleteOpen(true);
+                return;
+              }
+              const confirmed = typeof window !== 'undefined' ? window.confirm('هل أنت متأكد من حذف هذا الحساب؟ لا يمكن التراجع.') : true;
+              if (!confirmed) return;
+              const res = await deleteUserByKind(menuUser.kind, menuUser.id);
+              if (res.ok) {
+                setEditMessage('تم حذف الحساب بنجاح');
+                load();
+              } else {
+                setEditError(res.error ?? 'فشل حذف الحساب');
+              }
+            }, 
+            tone: 'error' 
+          },
         ]}
       />
 
@@ -444,6 +468,36 @@ function UsersTable() {
           </Stack>
         </Box>
       </Modal>
+      <DeleteWarning
+        open={deleteOpen}
+        title="تأكيد حذف المعلم"
+        entityName={pendingDeleteUser?.name}
+        description="سيتم حذف هذا المعلم وكل بياناته نهائيًا."
+        impacts={[
+          'سيتم حذف جميع الطلاب المرتبطين بهذا المعلم',
+          'سيتم حذف أجهزة الطلاب المرتبطة',
+          'سيتم حذف جلسات الطلاب ونتائج الاختبارات',
+          'سيتم حذف سجلات المحاسبة الخاصة بالمعلم',
+          'سيتم حذف إعدادات محاسبة المعلم',
+          'سيتم حذف الحساب نهائيًا',
+        ]}
+        confirmText="تأكيد الحذف"
+        cancelText="إلغاء"
+        onConfirm={async () => {
+          if (!pendingDeleteUser) return;
+          setDeleteOpen(false);
+          const res = await deleteUserByKind('teacher', pendingDeleteUser.id);
+          if (res.ok) {
+            setEditMessage('تم حذف المعلم وكل طلابه بنجاح');
+            setPendingDeleteUser(null);
+            load();
+          } else {
+            setEditError(res.error ?? 'فشل حذف المعلم');
+            setPendingDeleteUser(null);
+          }
+        }}
+        onCancel={() => { setDeleteOpen(false); setPendingDeleteUser(null); }}
+      />
       <Snackbar open={!!editMessage} autoHideDuration={4000} onClose={() => setEditMessage(null)}>
         <Alert severity="success" variant="filled">{editMessage}</Alert>
       </Snackbar>

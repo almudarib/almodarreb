@@ -540,11 +540,102 @@ export async function deleteUserByKind(
     if (!u?.auth_user_id) {
       return { ok: false, error: 'User auth user not found' };
     }
+    if (kind === 'teacher') {
+      const { data: sIdsRows, error: sIdsErr } = await supabase
+        .from('students')
+        .select('id')
+        .eq('teacher_id', id);
+      if (sIdsErr) {
+        return { ok: false, error: sIdsErr.message, details: sIdsErr };
+      }
+      const studentIds = (sIdsRows ?? []).map((r) => r.id as number).filter((v): v is number => typeof v === 'number');
+      if (studentIds.length > 0) {
+        const { error: sesErr } = await supabase.from('student_sessions').delete().in('student_id', studentIds);
+        if (sesErr) {
+          return { ok: false, error: sesErr.message, details: sesErr };
+        }
+        const { error: resErr } = await supabase.from('exam_results').delete().in('student_id', studentIds);
+        if (resErr) {
+          return { ok: false, error: resErr.message, details: resErr };
+        }
+        const { error: actErr } = await supabase.from('student_actions').delete().in('student_id', studentIds);
+        if (actErr) {
+          return { ok: false, error: actErr.message, details: actErr };
+        }
+        const { error: devErr } = await supabase.from('student_devices').delete().in('student_id', studentIds);
+        if (devErr) {
+          return { ok: false, error: devErr.message, details: devErr };
+        }
+        const { error: accErr } = await supabase.from('accounting').delete().eq('teacher_id', id);
+        if (accErr) {
+          return { ok: false, error: accErr.message, details: accErr };
+        }
+        const { error: stuDelErr } = await supabase.from('students').delete().eq('teacher_id', id);
+        if (stuDelErr) {
+          return { ok: false, error: stuDelErr.message, details: stuDelErr };
+        }
+      }
+      const { error: delSettingsErr } = await supabase
+        .from('teacher_accounting_settings')
+        .delete()
+        .eq('teacher_id', id);
+      if (delSettingsErr) {
+        return { ok: false, error: delSettingsErr.message, details: delSettingsErr };
+      }
+    }
+    const { error: delRolesErr } = await supabase.from('user_roles').delete().eq('user_id', id);
+    if (delRolesErr) {
+      return { ok: false, error: delRolesErr.message, details: delRolesErr };
+    }
+    const { error: delUserRowErr } = await supabase.from('users').delete().eq('id', id);
+    if (delUserRowErr) {
+      return { ok: false, error: delUserRowErr.message, details: delUserRowErr };
+    }
     const { error: delAuthErr } = await supabase.auth.admin.deleteUser(u.auth_user_id as string);
     if (delAuthErr) {
       return { ok: false, error: delAuthErr.message, details: delAuthErr };
     }
     return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error,
+    };
+  }
+}
+
+export async function reassignTeacherStudents(
+  fromTeacherId: number,
+  toTeacherId: number,
+): Promise<{ ok: true; updated: number } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    if (fromTeacherId === toTeacherId) {
+      return { ok: false, error: 'Same teacher id' };
+    }
+    const { data: tExists, error: tErr } = await supabase.from('users').select('id').eq('id', toTeacherId).maybeSingle();
+    if (tErr) {
+      return { ok: false, error: tErr.message, details: tErr };
+    }
+    if (!tExists?.id) {
+      return { ok: false, error: 'Target teacher not found' };
+    }
+    const { count: beforeCount, error: cntErr } = await supabase
+      .from('students')
+      .select('id', { count: 'exact', head: true })
+      .eq('teacher_id', fromTeacherId);
+    if (cntErr) {
+      return { ok: false, error: cntErr.message, details: cntErr };
+    }
+    const { error: updErr } = await supabase
+      .from('students')
+      .update({ teacher_id: toTeacherId })
+      .eq('teacher_id', fromTeacherId);
+    if (updErr) {
+      return { ok: false, error: updErr.message, details: updErr };
+    }
+    return { ok: true, updated: beforeCount ?? 0 };
   } catch (error) {
     return {
       ok: false,

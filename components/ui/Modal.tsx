@@ -9,6 +9,7 @@ export type ModalProps = Omit<DialogProps, 'actions'> & {
   cancelText?: React.ReactNode;
   onSubmit?: () => void;
   onCancel?: () => void;
+  submitDisabled?: boolean;
 };
 
 export function Modal({
@@ -18,6 +19,7 @@ export function Modal({
   cancelText = 'إلغاء',
   onSubmit,
   onCancel,
+  submitDisabled,
   ...rest
 }: ModalProps) {
   const actions = (
@@ -25,7 +27,7 @@ export function Modal({
       <Button variant="outlined" onClick={onCancel}>
         {cancelText}
       </Button>
-      <Button variant="contained" onClick={onSubmit}>
+      <Button variant="contained" onClick={onSubmit} disabled={Boolean(submitDisabled)}>
         {submitText}
       </Button>
     </Stack>

@@ -10,7 +10,7 @@ import {
 import Slide from '@mui/material/Slide';
 import type { TransitionProps } from '@mui/material/transitions';
 
-export type DialogProps = Omit<MUIDialogProps, 'children'> & {
+export type DialogProps = Omit<MUIDialogProps, 'children' | 'title'> & {
   title?: React.ReactNode;
   actions?: React.ReactNode;
   children?: React.ReactNode;

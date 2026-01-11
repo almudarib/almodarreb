@@ -8,3 +8,4 @@ export { Modal } from './Modal';
 export { Form } from './Form';
 export { Menu } from './Menu';
 export { Table } from './Table';
+export { DeleteWarning } from './DeleteWarning';
