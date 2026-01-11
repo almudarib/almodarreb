@@ -211,12 +211,11 @@ function UsersTable() {
     const match = (u: UserSummary) => {
       if (!q) return true;
       const nameMatch = u.name.toLowerCase().includes(q);
-      const emailMatch = u.email.toLowerCase().includes(q);
       const roleText = u.kind === 'admin'
         ? 'admin مدير ادمن مسؤول'
         : 'teacher معلم معلّم أستاذ استاذ';
       const roleMatch = roleText.includes(q);
-      return nameMatch || emailMatch || roleMatch;
+      return nameMatch || roleMatch;
     };
     return users
       .filter(u => roleFilter === 'all' || u.kind === roleFilter)
@@ -282,9 +281,17 @@ function UsersTable() {
               fullWidth
               variant="outlined"
               size="small"
-              placeholder="ابحث بالاسم أو الدور أو البريد..."
+              name="admin-search-by-name-only"
+              type="text"
+              placeholder="ابحث بالاسم أو الدور فقط..."
               value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                const val = e.target.value;
+                if (val.includes('@')) return;
+                setSearchQuery(val);
+              }}
+              autoComplete="off"
+              inputProps={{ dir: 'rtl', style: { textAlign: 'right' }, autoComplete: 'off' }}
               InputProps={{
                 startAdornment: <Search sx={{ color: 'var(--neutral-400)', mr: 1, ml: 0 }} />,
                 sx: { 

@@ -1,23 +1,29 @@
 'use client';
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Stack, Typography, Pagination, MenuItem } from '@mui/material';
+import { 
+  Box, Stack, Typography, Pagination, MenuItem, 
+  Chip, Grid, Paper, Tooltip, InputAdornment
+} from '@mui/material';
 import Table, { type Column } from '@/components/ui/Table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { StudentRecord } from '@/app/actions/students';
+import { 
+  Search, FilterList, Add, CheckCircle, Cancel, HourglassEmpty 
+} from '@mui/icons-material';
 import StudentActions from '@/components/student/StudentActions';
 import StudentDetailsModal from '@/components/student/StudentDetailsModal';
 import AddStudentModal from '@/components/student/AddStudentModal';
-import { updateStudent } from '@/app/actions/students';
+import { updateStudent, type StudentRecord } from '@/app/actions/students';
 import { TextField as MuiTextField } from '@mui/material';
 import { StudentUIProvider } from '@/components/student/StudentUIContext';
 
+// --- تعريف الأنواع (Interfaces) لضمان عدم ظهور أخطاء Cannot find name ---
 export type StudentWithTeacher = StudentRecord & {
   teacher_name?: string;
 };
 
-export type StudentTableProps = {
+export interface StudentTableProps {
   students: StudentWithTeacher[];
   page: number;
   perPage: number;
@@ -27,6 +33,16 @@ export type StudentTableProps = {
   initialSearch?: string;
   defaultTeacherId?: number;
   lockTeacherAdd?: boolean;
+}
+
+// --- مساعدات التنسيق البصري ---
+const getStatusChip = (status?: string) => {
+  switch (status) {
+    case 'passed': return <Chip label="ناجح" color="success" size="small" icon={<CheckCircle />} sx={{ fontWeight: 600 }} />;
+    case 'failed': return <Chip label="راسب" color="error" size="small" icon={<Cancel />} sx={{ fontWeight: 600 }} />;
+    case 'active': return <Chip label="نشط" color="primary" size="small" icon={<HourglassEmpty />} sx={{ fontWeight: 600 }} />;
+    default: return <Chip label="غير معروف" variant="outlined" size="small" />;
+  }
 };
 
 export function StudentTable({
@@ -49,263 +65,239 @@ export function StudentTable({
   const [showExams, setShowExams] = React.useState<boolean | undefined>(undefined);
   const [examFrom, setExamFrom] = React.useState<string>('');
   const [examTo, setExamTo] = React.useState<string>('');
+  const [selected, setSelected] = React.useState<StudentWithTeacher | null>(null);
+
   React.useEffect(() => {
     const qp = new URLSearchParams(params.toString());
-    const s = qp.get('status');
-    setStatus(s ?? undefined);
+    setStatus(qp.get('status') ?? undefined);
     const se = qp.get('show_exams');
     setShowExams(se === null ? undefined : se === 'true');
     setExamFrom(qp.get('exam_datetime_from') ?? '');
     setExamTo(qp.get('exam_datetime_to') ?? '');
   }, [params]);
-  const [selected, setSelected] = React.useState<StudentWithTeacher | null>(null);
 
   React.useEffect(() => {
-    const currentParams = new URLSearchParams(params.toString());
-    const current = currentParams.get('search') ?? '';
-    const next = search ?? '';
-    if (current === next) return;
+    const current = params.get('search') ?? '';
+    if (current === search) return;
     const handle = window.setTimeout(() => {
       const qp = new URLSearchParams(params.toString());
-      if (next) qp.set('search', next);
+      if (search) qp.set('search', search);
       else qp.delete('search');
       qp.set('page', '1');
       router.push(`?${qp.toString()}`);
-    }, 300);
+    }, 500);
     return () => window.clearTimeout(handle);
   }, [search, params, router]);
 
-  function openDetails(stu: StudentWithTeacher) {
-    setSelected(stu);
-    setDetailsOpen(true);
-  }
-
-  function changeSort(columnId: string, direction: 'asc' | 'desc') {
-    const qp = new URLSearchParams(params.toString());
-    qp.set('sort_by', columnId);
-    qp.set('sort_dir', direction);
-    router.push(`?${qp.toString()}`);
-  }
-
-  function changePage(newPage: number) {
-    const qp = new URLSearchParams(params.toString());
-    qp.set('page', String(newPage));
-    router.push(`?${qp.toString()}`);
-  }
-
-  function doSearch() {
-    const qp = new URLSearchParams(params.toString());
-    qp.set('search', search);
-    qp.set('page', '1');
-    router.push(`?${qp.toString()}`);
-  }
-  function applyFilters() {
-    const qp = new URLSearchParams(params.toString());
-    if (status) qp.set('status', status);
-    else qp.delete('status');
-    if (showExams !== undefined) qp.set('show_exams', String(showExams));
-    else qp.delete('show_exams');
-    if (examFrom) qp.set('exam_datetime_from', examFrom);
-    else qp.delete('exam_datetime_from');
-    if (examTo) qp.set('exam_datetime_to', examTo);
-    else qp.delete('exam_datetime_to');
-    qp.set('page', '1');
-    router.push(`?${qp.toString()}`);
-  }
-
   const columns: Column<StudentWithTeacher>[] = [
     {
-      id: 'actions',
-      label: 'خيارات',
+      id: 'name',
+      label: 'الاسم الكامل',
+      sortable: true,
       render: (row) => (
-        <StudentActions student={row} onOpenDetails={(s) => openDetails(s as StudentWithTeacher)} />
-      ),
+        <Typography sx={{ fontWeight: 600 }}>{row.name}</Typography>
+      )
     },
-    { id: 'name', label: 'الاسم الكامل', sortable: true },
+    {
+        id: 'status',
+        label: 'الحالة',
+        render: (row) => getStatusChip(row.status)
+    },
     {
       id: 'national_id',
       label: 'رقم الهوية',
-      render: (row) => {
-        const valid = /^\d{10,20}$/.test(String(row.national_id));
-        return (
-          <Typography color={valid ? 'inherit' : 'error'}>
-            {row.national_id}
-          </Typography>
-        );
-      },
+      render: (row) => (
+        <Typography variant="body2" color={/^\d{10,20}$/.test(String(row.national_id)) ? 'text.secondary' : 'error'}>
+          {row.national_id}
+        </Typography>
+      ),
     },
     {
       id: 'teacher_name',
-      label: 'الأستاذ المشرف',
-      render: (row) => <Typography>{row.teacher_name ?? row.teacher_id}</Typography>,
-    },
-    {
-      id: 'registration_date',
-      label: 'تاريخ التسجيل',
-      sortable: true,
-      render: (row) => <Typography>{row.registration_date ?? '--'}</Typography>,
+      label: 'المعلم المشرف',
+      render: (row) => (
+        <Chip label={row.teacher_name ?? 'غير محدد'} variant="outlined" size="small" sx={{ borderRadius: '8px' }} />
+      ),
     },
     {
       id: 'notes',
       label: 'ملاحظات',
       render: (row) => <InlineNotes student={row} />,
     },
+    {
+      id: 'actions',
+      label: 'خيارات',
+      align: 'right',
+      render: (row) => (
+        <StudentActions student={row} onOpenDetails={(s) => { setSelected(s as StudentWithTeacher); setDetailsOpen(true); }} />
+      ),
+    },
   ];
 
-  const pages = Math.max(1, Math.ceil((total ?? students.length) / perPage));
+  const applyFilters = () => {
+    const qp = new URLSearchParams(params.toString());
+    const fields = { status, show_exams: showExams, exam_datetime_from: examFrom, exam_datetime_to: examTo };
+    Object.entries(fields).forEach(([key, val]) => {
+      if (val !== undefined && val !== '') qp.set(key, String(val));
+      else qp.delete(key);
+    });
+    qp.set('page', '1');
+    router.push(`?${qp.toString()}`);
+  };
 
   return (
     <Box dir="rtl">
-      <StudentUIProvider
-        value={{
-          addOpen,
-          setAddOpen,
-          selectedId: selected?.id ?? null,
-          setSelectedId: (id) => {
-            const s = id ? students.find((x) => x.id === id) ?? null : null;
-            setSelected(s);
-          },
-        }}
-      >
-      <Stack spacing={2}>
-        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}>الطلاب</Typography>
-          <Button variant="contained" onClick={() => setAddOpen(true)}>
-            طالب جديد
-          </Button>
-        </Stack>
-        <Box
-          sx={{
-            p: 2,
-            border: '1px solid var(--neutral-200)',
-            borderRadius: '12px',
-            bgcolor: 'var(--brand-white)'
-          }}
-        >
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-          <Input
-            fullWidth
-            placeholder="ابحث بالاسم أو رقم الهوية أو الأستاذ المشرف"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') doSearch();
-            }}
-          />
-          <Button variant="outlined" onClick={doSearch}>
-            بحث
-          </Button>
-          <Input
-            select
-            label="الحالة"
-            value={status ?? ''}
-            onChange={(e) => setStatus(e.target.value || undefined)}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value=""></MenuItem>
-            <MenuItem value="all">الكل</MenuItem>
-            <MenuItem value="passed">ناجح</MenuItem>
-            <MenuItem value="failed">راسب</MenuItem>
-            <MenuItem value="active">نشط</MenuItem>
-            <MenuItem value="inactive">غير نشط</MenuItem>
-          </Input>
-          <Input
-            label="تاريخ الامتحان من"
-            type="date"
-            value={examFrom}
-            onChange={(e) => setExamFrom(e.target.value)}
-            sx={{ minWidth: 180 }}
-            InputLabelProps={{ shrink: true }}
-          />
-          <Input
-            label="تاريخ الامتحان إلى"
-            type="date"
-            value={examTo}
-            onChange={(e) => setExamTo(e.target.value)}
-            sx={{ minWidth: 180 }}
-            InputLabelProps={{ shrink: true }}
-          />
-          <Input
-            select
-            label="إظهار الاختبارات"
-            value={
-              showExams === undefined ? '' : showExams ? 'true' : 'false'
-            }
-            onChange={(e) => {
-              const v = e.target.value;
-              setShowExams(v === '' ? undefined : v === 'true');
-            }}
-            sx={{ minWidth: 160 }}
-          >
-            <MenuItem value=""></MenuItem>
-            <MenuItem value="true">ظاهر</MenuItem>
-            <MenuItem value="false">مخفي</MenuItem>
-          </Input>
-          <Button variant="outlined" onClick={applyFilters}>
-            تطبيق الفلاتر
-          </Button>
-        </Stack>
-        </Box>
+      <StudentUIProvider value={{ 
+          addOpen, 
+          setAddOpen, 
+          selectedId: selected?.id ?? null, 
+          setSelectedId: (id) => setSelected(students.find(x => x.id === id) ?? null) 
+      }}>
+        <Stack spacing={3}>
+          
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Box>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>قائمة الطلاب</Typography>
+                <Typography color="text.secondary">إدارة بيانات الطلاب والملاحظات</Typography>
+            </Box>
+            <Button 
+                variant="contained" 
+                className="bg-[var(--brand-teal)] hover:bg-[var(--brand-teal-hover)] text-white gap-2 px-6 h-12 rounded-xl"
+                onClick={() => setAddOpen(true)}
+            >
+              <Add /> إضافة طالب جديد
+            </Button>
+          </Stack>
 
-        <Table
-          columns={columns}
-          data={students}
-          sortBy={sortBy}
-          sortDirection={sortDir}
-          onSortChange={changeSort}
-          getRowId={(r) => r.id}
-        />
+          <Paper sx={{ p: 3, borderRadius: '16px', border: '1px solid var(--neutral-200)' }}>
+            <Grid container spacing={2} alignItems="flex-end">
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Input
+                  placeholder="ابحث بالاسم، الهوية، أو المعلم..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search sx={{ color: 'var(--neutral-400)', ml: 1 }} />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                <Input
+                  select
+                  value={status ?? ''}
+                  onChange={(e: any) => setStatus(e.target.value || undefined)}
+                >
+                  <MenuItem value="">الكل</MenuItem>
+                  <MenuItem value="active">نشط</MenuItem>
+                  <MenuItem value="passed">ناجح</MenuItem>
+                  <MenuItem value="failed">راسب</MenuItem>
+                </Input>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+                <MuiTextField
+                  label="من تاريخ"
+                  type="date"
+                  fullWidth
+                  value={examFrom}
+                  onChange={(e) => setExamFrom(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 2.5 }}>
+                <MuiTextField
+                  label="إلى تاريخ"
+                  type="date"
+                  fullWidth
+                  value={examTo}
+                  onChange={(e) => setExamTo(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  size="small"
+                />
+              </Grid>
+              <Grid size={{ xs: 12, md: 1 }}>
+                <Button variant="outlined" className="w-full h-10" onClick={applyFilters}>
+                  تصفية
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
 
-        <Stack direction="row" justifyContent="center">
-          <Pagination
-            count={pages}
-            page={page}
-            onChange={(_, p) => changePage(p)}
-          />
+          <Paper sx={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--neutral-200)' }}>
+            <Table
+              columns={columns}
+              data={students}
+              sortBy={sortBy}
+              sortDirection={sortDir}
+              onSortChange={(id, dir) => {
+                const qp = new URLSearchParams(params.toString());
+                qp.set('sort_by', id); qp.set('sort_dir', dir);
+                router.push(`?${qp.toString()}`);
+              }}
+              getRowId={(r) => r.id}
+            />
+          </Paper>
+
+          <Stack direction="row" justifyContent="center">
+            <Pagination
+              count={Math.max(1, Math.ceil((total ?? students.length) / perPage))}
+              page={page}
+              onChange={(_, p) => {
+                const qp = new URLSearchParams(params.toString());
+                qp.set('page', String(p));
+                router.push(`?${qp.toString()}`);
+              }}
+              color="primary"
+            />
+          </Stack>
         </Stack>
-      </Stack>
 
-      <StudentDetailsModal
-        open={detailsOpen}
-        onClose={() => setDetailsOpen(false)}
-        student={selected}
-        teacherName={selected?.teacher_name}
-      />
-      <AddStudentModal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        defaultTeacherId={defaultTeacherId}
-        lockTeacher={lockTeacherAdd}
-      />
+        <StudentDetailsModal open={detailsOpen} onClose={() => setDetailsOpen(false)} student={selected} teacherName={selected?.teacher_name} />
+        <AddStudentModal open={addOpen} onClose={() => setAddOpen(false)} defaultTeacherId={defaultTeacherId} lockTeacher={lockTeacherAdd} />
       </StudentUIProvider>
     </Box>
   );
 }
 
-export default StudentTable;
-
 function InlineNotes({ student }: { student: StudentWithTeacher }) {
   const router = useRouter();
   const [val, setVal] = React.useState(student.notes ?? '');
   const [saving, setSaving] = React.useState(false);
-  React.useEffect(() => {
-    setVal(student.notes ?? '');
-  }, [student.id, student.notes]);
-  async function onBlur() {
+
+  const onBlur = async () => {
     if ((student.notes ?? '') === val) return;
     setSaving(true);
     const r = await updateStudent({ id: student.id, notes: val });
     setSaving(false);
-    if (!r.ok) alert(r.error);
-    else router.refresh();
-  }
+    if (r.ok) router.refresh();
+  };
+
   return (
-    <MuiTextField
-      value={val}
-      onChange={(e) => setVal(e.target.value)}
-      onBlur={onBlur}
-      size="small"
-      disabled={saving}
-    />
+    <Tooltip title="اضغط للتعديل">
+      <MuiTextField
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={onBlur}
+        size="small"
+        placeholder="..."
+        variant="standard"
+        disabled={saving}
+        InputProps={{
+          disableUnderline: true,
+          sx: { 
+            fontSize: '0.85rem', 
+            bgcolor: 'var(--neutral-50)', 
+            px: 1, 
+            borderRadius: '4px'
+          }
+        }}
+      />
+    </Tooltip>
   );
 }
+
+export default StudentTable;
