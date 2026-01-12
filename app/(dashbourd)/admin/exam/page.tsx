@@ -11,9 +11,9 @@ import {
   Typography,
   Chip,
 } from '@mui/material';
-import { Input, Card, CardHeader, CardContent, CardActions, Button, Modal, Form, Table } from '@/components/ui';
-import { type ExamRecord, createExam, listExams, type ListExamsQuery } from '@/app/actions/exam';
-import { Search } from '@mui/icons-material';
+import { Input, Card, CardHeader, CardContent, CardActions, Button, Modal, Form, Table, Menu, DeleteWarning } from '@/components/ui';
+import { type ExamRecord, createExam, listExams, type ListExamsQuery, updateExam, deleteExam } from '@/app/actions/exam';
+import { Search, MoreVert, EditOutlined, DeleteOutline } from '@mui/icons-material';
 
 function AddExamForm({
   onCreated,
@@ -170,6 +170,10 @@ function ExamsTable() {
   const perPage = 20;
 
   const [reloadKey, setReloadKey] = React.useState(0);
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [selected, setSelected] = React.useState<ExamRecord | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -201,6 +205,22 @@ function ExamsTable() {
   React.useEffect(() => {
     load();
   }, [load, reloadKey]);
+
+  function handleOpenMenu(e: React.MouseEvent<HTMLButtonElement>, exam: ExamRecord) {
+    setSelected(exam);
+    setAnchorEl(e.currentTarget);
+  }
+  function handleCloseMenu() {
+    setAnchorEl(null);
+  }
+  async function handleDeleteExam() {
+    setConfirmDelete(true);
+    handleCloseMenu();
+  }
+  function handleEditExam() {
+    setEditOpen(true);
+    handleCloseMenu();
+  }
 
   return (
     <Card elevation={1}>
@@ -272,6 +292,18 @@ function ExamsTable() {
               label: 'الحالة',
               render: (e: ExamRecord) => (e.is_active ? 'نشط' : 'غير نشط'),
             },
+            {
+              id: 'actions',
+              label: 'إجراء',
+              align: 'right',
+              render: (e: ExamRecord) => (
+                <>
+                  <Button variant="outlined" onClick={(ev) => handleOpenMenu(ev as any, e)}>
+                    <MoreVert fontSize="small" />
+                  </Button>
+                </>
+              ),
+            },
           ]}
           data={exams}
           loading={loading}
@@ -285,11 +317,168 @@ function ExamsTable() {
           }}
           getRowId={(e) => e.id}
         />
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleCloseMenu}
+          items={[
+            {
+              label: (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <EditOutlined fontSize="small" />
+                  <Typography>تعديل</Typography>
+                </Stack>
+              ),
+              onClick: handleEditExam,
+            },
+            {
+              label: (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <DeleteOutline fontSize="small" />
+                  <Typography>مسح</Typography>
+                </Stack>
+              ),
+              onClick: handleDeleteExam,
+              tone: 'error',
+            },
+          ]}
+        />
+        <EditExamModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          exam={selected}
+          onSaved={() => {
+            setEditOpen(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+        <DeleteWarning
+          open={confirmDelete}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={async () => {
+            if (!selected) return;
+            const res = await deleteExam(selected.id);
+            if (res.ok) {
+              setConfirmDelete(false);
+              setReloadKey((k) => k + 1);
+            }
+          }}
+          title="تأكيد حذف الامتحان"
+          entityName={selected?.title}
+          impacts={['حذف الامتحان', 'حذف جميع أسئلته المرتبطة']}
+          confirmText="تأكيد المسح"
+        />
       </CardContent>
     </Card>
   );
 }
 
+function EditExamModal({
+  open,
+  onClose,
+  exam,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  exam: ExamRecord | null;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = React.useState('');
+  const [language, setLanguage] = React.useState<'ar' | 'en' | 'tr' | ''>('');
+  const [duration, setDuration] = React.useState<number | ''>('');
+  const [isActive, setIsActive] = React.useState<'active' | 'inactive'>('active');
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!exam || !open) return;
+    setTitle(exam.title);
+    setLanguage((exam.language as 'ar' | 'en' | 'tr') ?? '');
+    setDuration(exam.duration_minutes);
+    setIsActive(exam.is_active ? 'active' : 'inactive');
+    setError(null);
+  }, [exam, open]);
+
+  async function handleSubmit() {
+    if (!exam) return;
+    setSaving(true);
+    setError(null);
+    const dur = typeof duration === 'string' ? Number(duration) : duration;
+    const res = await updateExam({
+      id: exam.id,
+      title: title.trim(),
+      language: language || undefined,
+      duration_minutes: Number(dur),
+      is_active: isActive === 'active',
+    });
+    setSaving(false);
+    if (res.ok) {
+      onSaved();
+    } else {
+      setError(res.error);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="تعديل الامتحان"
+      submitText={saving ? 'جاري الحفظ...' : 'حفظ'}
+      cancelText="إلغاء"
+      onSubmit={handleSubmit}
+      onCancel={onClose}
+      fullWidth
+      maxWidth="sm"
+    >
+      {!exam ? null : (
+        <Box>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          <Stack spacing={2}>
+            <Input
+              label="عنوان الامتحان"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              fullWidth
+            />
+            <Input
+              label="اللغة"
+              select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as 'ar' | 'en' | 'tr')}
+              required
+              fullWidth
+            >
+              <MenuItem value="ar">العربية</MenuItem>
+              <MenuItem value="en">الإنجليزية</MenuItem>
+              <MenuItem value="tr">التركية</MenuItem>
+            </Input>
+            <Input
+              label="مدة الامتحان (بالدقائق)"
+              type="number"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value === '' ? '' : Number(e.target.value))}
+              required
+              fullWidth
+            />
+            <Input
+              label="الحالة"
+              select
+              value={isActive}
+              onChange={(e) => setIsActive(e.target.value as 'active' | 'inactive')}
+              fullWidth
+            >
+              <MenuItem value="active">نشط</MenuItem>
+              <MenuItem value="inactive">غير نشط</MenuItem>
+            </Input>
+          </Stack>
+        </Box>
+      )}
+    </Modal>
+  );
+}
 export default function AdminExamPage() {
   const [addOpen, setAddOpen] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
