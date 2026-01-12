@@ -305,25 +305,17 @@ function InlineNotes({ student }: { student: StudentWithTeacher }) {
   const router = useRouter();
   const [val, setVal] = React.useState(student.notes ?? '');
   const [saving, setSaving] = React.useState(false);
-  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   const onBlur = async () => {
     if ((student.notes ?? '') === val) return;
     setSaving(true);
-    setErrorMsg(null);
     const r = await updateStudent({ id: student.id, notes: val });
     setSaving(false);
-    if (r.ok) {
-      router.refresh();
-    } else {
-      setErrorMsg(r.error);
-      alert(r.error);
-      setVal(student.notes ?? '');
-    }
+    if (r.ok) router.refresh();
   };
 
   return (
-    <Tooltip title={errorMsg ? `خطأ: ${errorMsg}` : 'اضغط للتعديل'}>
+    <Tooltip title="اضغط للتعديل">
       <MuiTextField
         value={val}
         onChange={(e) => setVal(e.target.value)}
@@ -339,10 +331,8 @@ function InlineNotes({ student }: { student: StudentWithTeacher }) {
             bgcolor: 'var(--neutral-50)', 
             px: 1, 
             borderRadius: '4px'
-          },
-          endAdornment: saving ? <HourglassEmpty fontSize="small" sx={{ color: 'var(--neutral-500)' }} /> : undefined
+          }
         }}
-        error={!!errorMsg}
       />
     </Tooltip>
   );

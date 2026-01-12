@@ -10,10 +10,11 @@ import {
   Stack,
   Typography,
   Chip,
+  Divider,
 } from '@mui/material';
 import { Input, Card, CardHeader, CardContent, CardActions, Button, Modal, Form, Table, Menu, DeleteWarning } from '@/components/ui';
 import { type ExamRecord, createExam, listExams, type ListExamsQuery, updateExam, deleteExam } from '@/app/actions/exam';
-import { Search, MoreVert, EditOutlined, DeleteOutline } from '@mui/icons-material';
+import { Search, MoreVert, EditOutlined, DeleteOutline, LanguageRounded } from '@mui/icons-material';
 
 function AddExamForm({
   onCreated,
@@ -161,6 +162,7 @@ function ExamsTable() {
   const [exams, setExams] = React.useState<ExamRecord[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [languageFilter, setLanguageFilter] = React.useState<'all' | 'ar' | 'en' | 'tr'>('all');
@@ -214,6 +216,7 @@ function ExamsTable() {
     setAnchorEl(null);
   }
   async function handleDeleteExam() {
+    setDeleteError(null);
     setConfirmDelete(true);
     handleCloseMenu();
   }
@@ -240,30 +243,92 @@ function ExamsTable() {
             mb: 2
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-            <Input
-              placeholder="ابحث بعنوان الامتحان"
-              aria-label="حقل البحث عن الامتحان"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{ startAdornment: <Search fontSize="small" /> }}
-              size="small"
-            />
-            <Input
-              label="اللغة"
-              select
-              aria-label="تصفية اللغة"
-              value={languageFilter}
-              onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'ar' | 'en' | 'tr')}
-              size="small"
-              sx={{ minWidth: 140 }}
-            >
-              <MenuItem value="all">الكل</MenuItem>
-              <MenuItem value="ar">العربية</MenuItem>
-              <MenuItem value="en">الإنجليزية</MenuItem>
-              <MenuItem value="tr">التركية</MenuItem>
-            </Input>
-          </Stack>
+<Box
+  sx={{
+    p: 2.5,
+    mb: 3,
+    borderRadius: 4,
+    bgcolor: 'rgba(0, 0, 0, 0.02)', // خلفية هادئة لتمييز منطقة الفلترة
+    border: '1px solid',
+    borderColor: 'divider',
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      bgcolor: 'rgba(0, 0, 0, 0.03)',
+      borderColor: 'primary.light',
+    }
+  }}
+>
+  <Stack 
+    direction={{ xs: 'column', md: 'row' }} 
+    alignItems="center" 
+    spacing={2}
+  >
+    {/* حقل البحث المحسن */}
+    <Box sx={{ flexGrow: 1, width: '100%' }}>
+      <Input
+        placeholder="ابحث عن امتحان معين..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        fullWidth
+        size="medium" // حجم أكبر قليلاً لسهولة الاستخدام
+        sx={{
+          bgcolor: 'white',
+          borderRadius: 2,
+          '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, // إخفاء الحواف التقليدية
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)', // ظل ناعم
+        }}
+        InputProps={{ 
+          startAdornment: (
+            <Search 
+              sx={{ 
+                color: 'primary.main', 
+                mr: 1.5, 
+                fontSize: 22 
+              }} 
+            /> 
+          ) 
+        }}
+      />
+    </Box>
+
+    {/* فلتر اللغة بتصميم عصري */}
+    <Box sx={{ width: { xs: '100%', md: 200 } }}>
+      <Input
+        select
+        label="اللغة"
+        value={languageFilter}
+        onChange={(e) => setLanguageFilter(e.target.value as 'all' | 'ar' | 'en' | 'tr')}
+        fullWidth
+        size="medium"
+        sx={{
+          bgcolor: 'white',
+          borderRadius: 2,
+          '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        }}
+        
+      >
+        <MenuItem value="all" sx={{ fontWeight: 600 }}>الكل (جميع اللغات)</MenuItem>
+        <Divider sx={{ my: 1 }} />
+        <MenuItem value="ar">العربية</MenuItem>
+        <MenuItem value="en">الإنجليزية</MenuItem>
+        <MenuItem value="tr">التركية</MenuItem>
+      </Input>
+    </Box>
+
+    {/* زر مسح الفلاتر - إضافة اختيارية مفيدة جداً */}
+    {(searchQuery || languageFilter !== 'all') && (
+      <Button 
+        variant="text" 
+        color="inherit" 
+        onClick={() => { setSearchQuery(''); setLanguageFilter('all'); }}
+        sx={{ fontSize: 13, whiteSpace: 'nowrap' }}
+      >
+        مسح الكل
+      </Button>
+    )}
+  </Stack>
+</Box>
         </Box>
 
         <Table
@@ -354,19 +419,26 @@ function ExamsTable() {
         />
         <DeleteWarning
           open={confirmDelete}
-          onCancel={() => setConfirmDelete(false)}
+          onCancel={() => {
+            setConfirmDelete(false);
+            setDeleteError(null);
+          }}
           onConfirm={async () => {
             if (!selected) return;
             const res = await deleteExam(selected.id);
             if (res.ok) {
               setConfirmDelete(false);
               setReloadKey((k) => k + 1);
+              setDeleteError(null);
+            } else {
+              setDeleteError(res.error);
             }
           }}
           title="تأكيد حذف الامتحان"
           entityName={selected?.title}
           impacts={['حذف الامتحان', 'حذف جميع أسئلته المرتبطة']}
           confirmText="تأكيد المسح"
+          dangerNote={deleteError ?? undefined}
         />
       </CardContent>
     </Card>
@@ -390,6 +462,7 @@ function EditExamModal({
   const [isActive, setIsActive] = React.useState<'active' | 'inactive'>('active');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   React.useEffect(() => {
     if (!exam || !open) return;
@@ -398,25 +471,40 @@ function EditExamModal({
     setDuration(exam.duration_minutes);
     setIsActive(exam.is_active ? 'active' : 'inactive');
     setError(null);
+    setFieldErrors({});
   }, [exam, open]);
 
   async function handleSubmit() {
     if (!exam) return;
     setSaving(true);
     setError(null);
+    const errs: Record<string, string> = {};
+    if (!String(title).trim()) errs.title = 'العنوان مطلوب';
+    if (!language) errs.language = 'اللغة مطلوبة';
     const dur = typeof duration === 'string' ? Number(duration) : duration;
-    const res = await updateExam({
-      id: exam.id,
-      title: title.trim(),
-      language: language || undefined,
-      duration_minutes: Number(dur),
-      is_active: isActive === 'active',
-    });
-    setSaving(false);
-    if (res.ok) {
-      onSaved();
-    } else {
-      setError(res.error);
+    if (!Number.isInteger(dur) || (dur as number) <= 0) errs.duration = 'المدة يجب أن تكون عددًا صحيحًا موجبًا';
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setSaving(false);
+      return;
+    }
+    try {
+      const res = await updateExam({
+        id: exam.id,
+        title: title.trim(),
+        language: language || undefined,
+        duration_minutes: Number(dur),
+        is_active: isActive === 'active',
+      });
+      if (res.ok) {
+        onSaved();
+      } else {
+        setError(res.error);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -442,6 +530,8 @@ function EditExamModal({
               onChange={(e) => setTitle(e.target.value)}
               required
               fullWidth
+              error={!!fieldErrors.title}
+              helperText={fieldErrors.title}
             />
             <Input
               label="اللغة"
@@ -450,6 +540,8 @@ function EditExamModal({
               onChange={(e) => setLanguage(e.target.value as 'ar' | 'en' | 'tr')}
               required
               fullWidth
+              error={!!fieldErrors.language}
+              helperText={fieldErrors.language}
             >
               <MenuItem value="ar">العربية</MenuItem>
               <MenuItem value="en">الإنجليزية</MenuItem>
@@ -462,6 +554,8 @@ function EditExamModal({
               onChange={(e) => setDuration(e.target.value === '' ? '' : Number(e.target.value))}
               required
               fullWidth
+              error={!!fieldErrors.duration}
+              helperText={fieldErrors.duration}
             />
             <Input
               label="الحالة"
