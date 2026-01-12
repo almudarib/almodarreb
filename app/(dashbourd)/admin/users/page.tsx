@@ -389,20 +389,8 @@ function UsersTable() {
             onClick: async () => { 
               if (!menuUser) return;
               setMenuAnchor(null);
-              if (menuUser.kind === 'teacher') {
-                setPendingDeleteUser(menuUser);
-                setDeleteOpen(true);
-                return;
-              }
-              const confirmed = typeof window !== 'undefined' ? window.confirm('هل أنت متأكد من حذف هذا الحساب؟ لا يمكن التراجع.') : true;
-              if (!confirmed) return;
-              const res = await deleteUserByKind(menuUser.kind, menuUser.id);
-              if (res.ok) {
-                setEditMessage('تم حذف الحساب بنجاح');
-                load();
-              } else {
-                setEditError(res.error ?? 'فشل حذف الحساب');
-              }
+              setPendingDeleteUser(menuUser);
+              setDeleteOpen(true);
             }, 
             tone: 'error' 
           },
@@ -477,29 +465,45 @@ function UsersTable() {
       </Modal>
       <DeleteWarning
         open={deleteOpen}
-        title="تأكيد حذف المعلم"
+        title={pendingDeleteUser?.kind === 'teacher' ? 'تأكيد حذف المعلم' : 'تأكيد حذف المسؤول'}
         entityName={pendingDeleteUser?.name}
-        description="سيتم حذف هذا المعلم وكل بياناته نهائيًا."
-        impacts={[
-          'سيتم حذف جميع الطلاب المرتبطين بهذا المعلم',
-          'سيتم حذف أجهزة الطلاب المرتبطة',
-          'سيتم حذف جلسات الطلاب ونتائج الاختبارات',
-          'سيتم حذف سجلات المحاسبة الخاصة بالمعلم',
-          'سيتم حذف إعدادات محاسبة المعلم',
-          'سيتم حذف الحساب نهائيًا',
-        ]}
+        description={pendingDeleteUser?.kind === 'teacher' ? 'سيتم حذف هذا المعلم وكل بياناته نهائيًا.' : 'سيتم حذف هذا المسؤول نهائيًا ولا يمكن التراجع.'}
+        impacts={
+          pendingDeleteUser?.kind === 'teacher'
+            ? [
+                'سيتم حذف جميع الطلاب المرتبطين بهذا المعلم',
+                'سيتم حذف أجهزة الطلاب المرتبطة',
+                'سيتم حذف جلسات الطلاب ونتائج الاختبارات',
+                'سيتم حذف سجلات المحاسبة الخاصة بالمعلم',
+                'سيتم حذف إعدادات محاسبة المعلم',
+                'سيتم حذف الحساب نهائيًا',
+              ]
+            : [
+                'سيتم حذف الحساب الإداري نهائيًا',
+                'سيفقد هذا المستخدم صلاحيات الإدارة بالكامل',
+                'لن يتمكن من الوصول إلى لوحة التحكم',
+              ]
+        }
         confirmText="تأكيد الحذف"
         cancelText="إلغاء"
         onConfirm={async () => {
           if (!pendingDeleteUser) return;
           setDeleteOpen(false);
-          const res = await deleteUserByKind('teacher', pendingDeleteUser.id);
+          const res = await deleteUserByKind(pendingDeleteUser.kind, pendingDeleteUser.id);
           if (res.ok) {
-            setEditMessage('تم حذف المعلم وكل طلابه بنجاح');
+            setEditMessage(
+              pendingDeleteUser.kind === 'teacher'
+                ? 'تم حذف المعلم وكل طلابه بنجاح'
+                : 'تم حذف المسؤول بنجاح'
+            );
             setPendingDeleteUser(null);
             load();
           } else {
-            setEditError(res.error ?? 'فشل حذف المعلم');
+            setEditError(
+              pendingDeleteUser.kind === 'teacher'
+                ? (res.error ?? 'فشل حذف المعلم')
+                : (res.error ?? 'فشل حذف المسؤول')
+            );
             setPendingDeleteUser(null);
           }
         }}

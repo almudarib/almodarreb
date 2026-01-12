@@ -36,6 +36,15 @@ export function AddStudentModal({ open, onClose, defaultTeacherId, lockTeacher }
   function setField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+  function normalizeDigits(s: string) {
+    const map: Record<string, string> = {
+      '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+      '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+      '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
+      '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9',
+    };
+    return s.replace(/[٠-٩۰-۹]/g, (d) => map[d] ?? d);
+  }
   // التواريخ تُحسب في الخلفية فقط، لا حاجة لحسابها هنا
 
   React.useEffect(() => {
@@ -61,9 +70,15 @@ export function AddStudentModal({ open, onClose, defaultTeacherId, lockTeacher }
   async function handleSubmit() {
     setSaving(true);
     setErrors({});
+    const nationalDigits = normalizeDigits(form.national_id).replace(/\D/g, '');
+    if (nationalDigits.length !== 11) {
+      setSaving(false);
+      setErrors((e) => ({ ...e, national_id: 'رقم الهوية يجب أن يكون 11 رقمًا' }));
+      return;
+    }
     const input = {
       name: form.name,
-      national_id: form.national_id,
+      national_id: nationalDigits,
       exam_datetime: form.exam_datetime || undefined,
       notes: form.notes || undefined,
       language: form.language,
@@ -112,7 +127,11 @@ export function AddStudentModal({ open, onClose, defaultTeacherId, lockTeacher }
               <Input
                 inputMode="numeric"
                 value={form.national_id}
-                onChange={(e) => setField('national_id', e.target.value)}
+                onChange={(e) => {
+                  const raw = normalizeDigits(e.target.value);
+                  const digits = raw.replace(/\D/g, '').slice(0, 11);
+                  setField('national_id', digits as any);
+                }}
                 placeholder="رقم الهوية الوطنية"
                 aria-label="رقم الهوية"
               />
