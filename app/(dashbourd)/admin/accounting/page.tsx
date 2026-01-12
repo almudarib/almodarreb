@@ -1,21 +1,25 @@
  'use client';
  
  import * as React from 'react';
- import {
-   Box,
-   Container,
-   Stack,
-   Typography,
-   Snackbar,
-   Alert,
- } from '@mui/material';
- import { Table } from '@/components/ui/Table';
- import { Button, Input, Card, CardHeader, CardContent, Modal } from '@/components/ui';
- import type { Column } from '@/components/ui/Table';
+import {
+  Box,
+  Container,
+  Stack,
+  Typography,
+  Snackbar,
+  Alert,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import { Table } from '@/components/ui/Table';
+import { Button, Input, Card, CardHeader, CardContent, Modal, DeleteWarning } from '@/components/ui';
+import type { Column } from '@/components/ui/Table';
+import { VisibilityOutlined, DeleteOutline } from '@mui/icons-material';
   import {
     listTeacherAccountingStats,
     getTeacherAccountingDetails,
     applyTeacherPayment,
+    initializeDefaultFeeForTeacher,
     initializeDefaultFeeForAllTeachers,
     deleteTeacherAccountingPending,
     type TeacherAccountingStats,
@@ -34,25 +38,27 @@
    const [details, setDetails] = React.useState<TeacherAccountingDetails | null>(null);
    const [paymentAmount, setPaymentAmount] = React.useState<string>('');
  
-   const [initOpen, setInitOpen] = React.useState(false);
-   const [initFee, setInitFee] = React.useState<string>('20');
-   const [toast, setToast] = React.useState<{ open: boolean; kind: 'success' | 'error'; msg: string }>({
-     open: false,
-     kind: 'success',
-     msg: '',
-   });
+  const [initOpen, setInitOpen] = React.useState(false);
+  const [initFee, setInitFee] = React.useState<string>('20');
+  const [toast, setToast] = React.useState<{ open: boolean; kind: 'success' | 'error'; msg: string }>({
+    open: false,
+    kind: 'success',
+    msg: '',
+  });
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<TeacherAccountingStats | null>(null);
  
-   async function loadStats() {
-     setLoading(true);
-     const res = await listTeacherAccountingStats();
-     if (res.ok) {
-       setStats(res.stats);
-       setError(null);
-     } else {
-       setError(res.error);
-     }
-     setLoading(false);
-   }
+  async function loadStats() {
+    setLoading(true);
+    const res = await listTeacherAccountingStats();
+    if (res.ok) {
+      setStats(res.stats.filter((s) => (s.total_due || 0) > 0));
+      setError(null);
+    } else {
+      setError(res.error);
+    }
+    setLoading(false);
+  }
  
    async function loadDetailsById(id: number) {
      const res = await getTeacherAccountingDetails(id);
@@ -101,9 +107,17 @@
  
   function formatCurrency(n: number) {
     try {
-      return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(
         n || 0,
       );
+    } catch {
+      return `${n}`;
+    }
+  }
+
+  function formatNumberEn(n: number) {
+    try {
+      return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n || 0);
     } catch {
       return `${n}`;
     }
@@ -126,33 +140,34 @@
      {
        id: 'actions',
        label: 'الإجراءات',
+       align: 'left',
        render: (row: TeacherAccountingStats) => (
-         <Stack direction="row" spacing={1}>
-           <Button
-             variant="contained"
-             onClick={async () => {
-               setSelectedTeacherId(row.teacher_id);
-               setDetailsOpen(true);
-               await loadDetailsById(row.teacher_id);
-             }}
-           >
-             عرض التفاصيل
-           </Button>
-           <Button
-             color="error"
-             variant="outlined"
-             onClick={async () => {
-               const res = await deleteTeacherAccountingPending(row.teacher_id);
-               if (res.ok) {
-                 setToast({ open: true, kind: 'success', msg: `تم حذف ${res.deleted} إدخالات معلقة` });
-                 loadStats();
-               } else {
-                 setToast({ open: true, kind: 'error', msg: res.error });
-               }
-             }}
-           >
-             حذف
-           </Button>
+         <Stack direction="row" spacing={1} alignItems="center">
+           <Tooltip title="عرض التفاصيل">
+             <IconButton
+               color="primary"
+               size="small"
+               onClick={async () => {
+                 setSelectedTeacherId(row.teacher_id);
+                 setDetailsOpen(true);
+                 await loadDetailsById(row.teacher_id);
+               }}
+             >
+               <VisibilityOutlined fontSize="small" />
+             </IconButton>
+           </Tooltip>
+           <Tooltip title="حذف الإدخالات المعلقة">
+             <IconButton
+               color="error"
+               size="small"
+               onClick={() => {
+                 setDeleteTarget(row);
+                 setDeleteOpen(true);
+               }}
+             >
+               <DeleteOutline fontSize="small" />
+             </IconButton>
+           </Tooltip>
          </Stack>
        ),
      },
@@ -175,33 +190,56 @@
        setPaymentAmount('');
        await loadStats();
        await loadDetailsById(selectedTeacherId);
-     } else {
-       setToast({ open: true, kind: 'error', msg: res.error });
-     }
-   }
- 
-   async function handleInitDefault() {
-     const fee = Number(initFee);
-     if (!Number.isFinite(fee) || fee < 0) {
-       setToast({ open: true, kind: 'error', msg: 'القيمة الافتراضية غير صالحة' });
-       return;
-     }
-     const res = await initializeDefaultFeeForAllTeachers(fee, { overwriteExisting: true });
-     if (res.ok) {
-       setToast({
-         open: true,
-         kind: 'success',
-         msg: `تم تهيئة الرسوم الافتراضية لكل الأساتذة بقيمة ${formatCurrency(fee)}`,
-       });
-       setInitOpen(false);
-       await loadStats();
-       if (selectedTeacherId !== null) {
-         await loadDetailsById(selectedTeacherId);
-       }
-     } else {
-       setToast({ open: true, kind: 'error', msg: res.error });
-     }
-   }
+    } else {
+      setToast({ open: true, kind: 'error', msg: res.error });
+    }
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    const res = await deleteTeacherAccountingPending(deleteTarget.teacher_id);
+    if (res.ok) {
+      setToast({ open: true, kind: 'success', msg: `تم حذف ${formatNumberEn(res.deleted)} إدخالات معلقة` });
+      setDeleteOpen(false);
+      setDeleteTarget(null);
+      await loadStats();
+      if (selectedTeacherId !== null) {
+        await loadDetailsById(selectedTeacherId);
+      }
+    } else {
+      setToast({ open: true, kind: 'error', msg: res.error });
+    }
+  }
+
+  async function handleInitDefault() {
+    const fee = Number(initFee);
+    if (!Number.isFinite(fee) || fee < 0) {
+      setToast({ open: true, kind: 'error', msg: 'القيمة الافتراضية غير صالحة' });
+      return;
+    }
+    const teacherIds = stats.map((s) => s.teacher_id);
+    let totalInserted = 0;
+    let totalDeleted = 0;
+    for (const tid of teacherIds) {
+      const r = await initializeDefaultFeeForTeacher(tid, fee, { overwriteExisting: true });
+      if (!r.ok) {
+        setToast({ open: true, kind: 'error', msg: r.error });
+        return;
+      }
+      totalInserted += r.inserted;
+      totalDeleted += r.deleted;
+    }
+    setToast({
+      open: true,
+      kind: 'success',
+      msg: `تم تهيئة الرسوم الافتراضية لعدد ${formatNumberEn(teacherIds.length)} أستاذ بقيمة ${formatCurrency(fee)}. أضيفت ${formatNumberEn(totalInserted)} وحُذفت ${formatNumberEn(totalDeleted)}`,
+    });
+    setInitOpen(false);
+    await loadStats();
+    if (selectedTeacherId !== null) {
+      await loadDetailsById(selectedTeacherId);
+    }
+  }
  
   return (
     <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
@@ -232,8 +270,8 @@
          <Card elevation={1} sx={{ flex: 1 }}>
            <CardContent>
              <Stack direction="row" justifyContent="space-between" alignItems="center">
-               <Typography variant="subtitle2">إجمالي الطلاب</Typography>
-               <Typography variant="h5">{totals.studentsCount}</Typography>
+              <Typography variant="subtitle2">إجمالي الطلاب</Typography>
+              <Typography variant="h5">{formatNumberEn(totals.studentsCount)}</Typography>
              </Stack>
              <Typography variant="caption" color="text.secondary">جميع الطلاب المسجلين</Typography>
            </CardContent>
@@ -241,8 +279,8 @@
          <Card elevation={1} sx={{ flex: 1 }}>
            <CardContent>
              <Stack direction="row" justifyContent="space-between" alignItems="center">
-               <Typography variant="subtitle2">عدد الأساتذة</Typography>
-               <Typography variant="h5">{totals.teacherCount}</Typography>
+              <Typography variant="subtitle2">عدد الأساتذة</Typography>
+              <Typography variant="h5">{formatNumberEn(totals.teacherCount)}</Typography>
              </Stack>
              <Typography variant="caption" color="text.secondary">الأساتذة النشطين</Typography>
            </CardContent>
@@ -281,7 +319,7 @@
           <Stack spacing={2}>
             <Box>
               <Typography variant="body1">إجمالي المطلوب: {formatCurrency(details.total_due)}</Typography>
-              <Typography variant="body2">عدد الطلاب: {details.students_count}</Typography>
+              <Typography variant="body2">عدد الطلاب: {formatNumberEn(details.students_count)}</Typography>
               <Typography variant="body2">
                 القيمة الافتراضية لكل طالب: {details.per_student_fee !== null ? formatCurrency(details.per_student_fee) : 'غير محددة'}
               </Typography>
@@ -305,7 +343,7 @@
                         label: 'المبلغ المطلوب',
                         render: (row: StudentAmount) => formatCurrency(row.pending_amount),
                       },
-                      { id: 'pending_entries', label: 'عدد السجلات' },
+                      { id: 'pending_entries', label: 'عدد السجلات', render: (row: StudentAmount) => formatNumberEn(row.pending_entries) },
                     ]}
                     data={details.students}
                   />
@@ -327,7 +365,23 @@
          <Alert severity={toast.kind} onClose={() => setToast((t) => ({ ...t, open: false }))}>
            {toast.msg}
          </Alert>
-       </Snackbar>
-     </Container>
-   );
+      </Snackbar>
+      <DeleteWarning
+        open={deleteOpen}
+        entityName={deleteTarget?.teacher_name}
+        description="سيتم حذف الإدخالات المعلقة لهذا الأستاذ."
+        impacts={[
+          'لن تظهر الإدخالات المعلقة للأستاذ في الجدول',
+          'لن تتأثر المدفوعات المطبقة'
+        ]}
+        confirmText="تأكيد الحذف"
+        cancelText="إلغاء"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setDeleteOpen(false);
+          setDeleteTarget(null);
+        }}
+      />
+    </Container>
+  );
  }
