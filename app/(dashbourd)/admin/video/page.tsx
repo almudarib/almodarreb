@@ -14,7 +14,7 @@ import {
   Pagination,
   LinearProgress,
 } from '@mui/material';
-import { Input, Card, CardHeader, CardContent, CardActions, Button, Modal, Form, Table } from '@/components/ui';
+import { Input, Card, CardHeader, CardContent, CardActions, Button, Modal, Form, Table, DeleteWarning } from '@/components/ui';
 import {
   listSessions,
   createSession,
@@ -748,6 +748,8 @@ function SessionsTable({
   const [page, setPage] = React.useState(1);
   const perPage = 10;
   const [total, setTotal] = React.useState<number | null>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [toDelete, setToDelete] = React.useState<SessionRecord | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -785,13 +787,15 @@ function SessionsTable({
     load();
   }, [load]);
 
-  async function handleDelete(row: SessionRecord) {
-    if (!window.confirm(`هل تريد حذف "${row.title}"؟`)) return;
-    const res = await deleteSession(row.id);
+  async function confirmDelete() {
+    if (!toDelete) return;
+    const res = await deleteSession(toDelete.id);
     if (!res.ok) {
       setError(res.error);
       return;
     }
+    setDeleteOpen(false);
+    setToDelete(null);
     onDeleted();
     load();
   }
@@ -799,8 +803,8 @@ function SessionsTable({
   const pages = Math.max(1, Math.ceil((total ?? sessions.length) / perPage));
 
   return (
+    <>
     <Card elevation={1}>
-      <CardHeader title="الفيديوهات / الجلسات" />
       <CardContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -863,7 +867,7 @@ function SessionsTable({
                   <IconButton color="primary" onClick={() => onEdit(row)} size="small">
                     <EditOutlined fontSize="small" />
                   </IconButton>
-                  <IconButton color="error" onClick={() => handleDelete(row)} size="small">
+                  <IconButton color="error" onClick={() => { setToDelete(row); setDeleteOpen(true); }} size="small">
                     <DeleteOutline fontSize="small" />
                   </IconButton>
                 </Stack>
@@ -914,6 +918,20 @@ function SessionsTable({
         </Stack>
       </CardContent>
     </Card>
+    <DeleteWarning
+      open={deleteOpen}
+      entityName={toDelete?.title}
+      description="سيتم حذف الجلسة وجميع مراجعها من النظام."
+      confirmText="تأكيد الحذف"
+      cancelText="إلغاء"
+      onConfirm={confirmDelete}
+      onCancel={() => { setDeleteOpen(false); setToDelete(null); }}
+      impacts={[
+        'لن تظهر الجلسة في القوائم بعد الآن',
+        'سيتم إزالة الوصول إلى الفيديو/الملف المرتبط'
+      ]}
+    />
+    </>
   );
 }
 
