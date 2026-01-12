@@ -10,8 +10,6 @@ import { useRouter } from 'next/navigation';
 import { Box, Stack, Typography, Table, TableHead, TableRow, TableCell, TableBody } from '@mui/material';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/Checkbox';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/button';
 
@@ -35,24 +33,9 @@ export function StudentDetailsModal({
   const [loginLoading, setLoginLoading] = React.useState(false);
   const [loginHistory, setLoginHistory] = React.useState<StudentLoginEvent[] | null>(null);
 
-  // حالة النموذج القابلة للتحرير
-  const [form, setForm] = React.useState<Partial<StudentRecord>>({});
   React.useEffect(() => {
-    if (student) {
-      setForm({
-        name: student.name,
-        national_id: student.national_id,
-        exam_datetime: student.exam_datetime,
-        start_date: student.start_date,
-        registration_date: student.registration_date,
-        last_login_at: student.last_login_at,
-        notes: student.notes ?? '',
-        status: student.status,
-        show_exams: student.show_exams,
-        teacher_id: student.teacher_id,
-      });
-    }
-  }, [student]);
+    // تحميل التقدم عند فتح النافذة
+  }, []);
 
   React.useEffect(() => {
     let active = true;
@@ -86,39 +69,8 @@ export function StudentDetailsModal({
     };
   }, [student, loginOpen]);
 
-  function setField<K extends keyof StudentRecord>(key: K, value: StudentRecord[K]) {
-    setForm((f) => ({ ...f, [key]: value }));
-  }
-
   async function handleSubmit() {
-    if (!student) return;
-    setSaving(true);
-    const payload: UpdateStudentInput = { id: student.id };
-    if (form.name !== undefined) payload.name = form.name as string;
-    if (form.national_id !== undefined) payload.national_id = form.national_id as string;
-    if (form.exam_datetime !== undefined)
-      payload.exam_datetime =
-        form.exam_datetime === '' ? null : (form.exam_datetime as string | null);
-    if (form.start_date !== undefined)
-      payload.start_date = form.start_date === '' ? null : (form.start_date as string | null);
-    if (form.registration_date !== undefined)
-      payload.registration_date =
-        form.registration_date === '' ? null : (form.registration_date as string | null);
-    if (form.last_login_at !== undefined)
-      payload.last_login_at =
-        form.last_login_at === '' ? null : (form.last_login_at as string | null);
-    if (form.notes !== undefined) payload.notes = form.notes as string | null;
-    if (form.status !== undefined) payload.status = form.status as string;
-    if (form.show_exams !== undefined) payload.show_exams = !!form.show_exams;
-    if (form.teacher_id !== undefined) payload.teacher_id = Number(form.teacher_id);
-    const r = await updateStudent(payload);
-    setSaving(false);
-    if (r.ok) {
-      onClose();
-      router.refresh();
-    } else {
-      alert(r.error);
-    }
+    onClose();
   }
 
   function formatDate(value: string | null): string {
@@ -135,106 +87,81 @@ export function StudentDetailsModal({
     const suffix = isPm ? 'م' : 'ص';
     return `${dd}-${mm}-${yyyy}  ${hh}:${mi}${suffix}`;
   }
+  function formatDateOnly(value: string | null): string {
+    if (!value) return '--';
+    const d = new Date(String(value));
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(d.getFullYear());
+    return `${dd}-${mm}-${yyyy}`;
+  }
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="بيانات الطالب"
-      submitText={saving ? 'جاري الحفظ...' : 'حفظ التعديلات'}
-      cancelText="إلغاء"
+      submitText="غير متاح"
+      cancelText="إغلاق"
       onSubmit={handleSubmit}
       onCancel={onClose}
+      submitDisabled
       fullWidth
       maxWidth="md"
     >
       {!student ? null : (
         <Box dir="rtl">
           <Stack spacing={2}>
-            <Typography variant="body2" sx={{ color: 'var(--neutral-700)' }}>
-              الأستاذ المشرف: {teacherName ?? '--'}
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2.5 }}>
-              <Box>
-                <Label>اسم الطالب</Label>
-                <Input
-                  value={form.name ?? ''}
-                  onChange={(e) => setField('name', e.target.value)}
-                  aria-label="اسم الطالب"
-                />
-              </Box>
-              <Box>
-                <Label>رقم الهوية</Label>
-                <Input
-                  inputMode="numeric"
-                  value={form.national_id ?? ''}
-                  onChange={(e) => setField('national_id', e.target.value)}
-                  aria-label="رقم الهوية"
-                />
-              </Box>
-              <Box>
-                <Label>تاريخ الامتحان</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.exam_datetime ? String(form.exam_datetime).slice(0, 16) : ''}
-                  onChange={(e) => setField('exam_datetime', e.target.value)}
-                  aria-label="تاريخ الامتحان"
-                />
-              </Box>
-              <Box>
-                <Label>تاريخ البدء</Label>
-                <Input
-                  type="date"
-                  value={form.start_date ?? ''}
-                  onChange={(e) => setField('start_date', e.target.value)}
-                  aria-label="تاريخ البدء"
-                />
-              </Box>
-              <Box>
-                <Label>تاريخ التسجيل</Label>
-                <Input
-                  type="date"
-                  value={form.registration_date ?? ''}
-                  onChange={(e) => setField('registration_date', e.target.value)}
-                  aria-label="تاريخ التسجيل"
-                />
-              </Box>
-              <Box>
-                <Label>آخر تسجيل دخول</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.last_login_at ? String(form.last_login_at).slice(0, 16) : ''}
-                  onChange={(e) => setField('last_login_at', e.target.value)}
-                  aria-label="آخر تسجيل دخول"
-                />
-              </Box>
-              <Box sx={{ gridColumn: { md: '1 / -1' } }}>
-                <Label>ملاحظة</Label>
-                <Input
-                  multiline
-                  rows={3}
-                  value={form.notes ?? ''}
-                  onChange={(e) => setField('notes', e.target.value)}
-                  aria-label="ملاحظة"
-                />
-              </Box>
-              <Box>
-                <Label>الحالة</Label>
-                <Input
-                  value={form.status ?? ''}
-                  onChange={(e) => setField('status', e.target.value)}
-                  aria-label="الحالة"
-                />
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Checkbox
-                  checked={!!form.show_exams}
-                  onChange={(e) => setField('show_exams', e.target.checked)}
-                  inputProps={{ 'aria-label': 'إظهار الاختبارات' }}
-                  label="إظهار الاختبارات"
-                />
-              </Box>
-            </Box>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>الحقل</TableCell>
+                  <TableCell>القيمة</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell>اسم الطالب</TableCell>
+                  <TableCell>{student.name}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>رقم الهوية</TableCell>
+                  <TableCell>{student.national_id}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>تاريخ الامتحان</TableCell>
+                  <TableCell>{formatDate(student.exam_datetime)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>تاريخ البدء</TableCell>
+                  <TableCell>{formatDateOnly(student.start_date)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>تاريخ التسجيل</TableCell>
+                  <TableCell>{formatDateOnly(student.registration_date)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>آخر تسجيل دخول</TableCell>
+                  <TableCell>{formatDate(student.last_login_at)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>الأستاذ المشرف</TableCell>
+                  <TableCell>{teacherName ?? '--'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>الحالة</TableCell>
+                  <TableCell>{student.status}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>إظهار الاختبارات</TableCell>
+                  <TableCell>{student.show_exams ? 'نعم' : 'لا'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>ملاحظة</TableCell>
+                  <TableCell>{student.notes ?? '--'}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
             <Stack direction="row" spacing={1} alignItems="center">
               <Input
                 value={loginOpen ? 'إخفاء التعقب' : 'تعقب تسجيلات الدخول'}

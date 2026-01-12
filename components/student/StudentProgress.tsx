@@ -2,15 +2,21 @@
 import * as React from 'react';
 import { Box, Stack, Typography, LinearProgress } from '@mui/material';
 import type { StudentProgressData } from '@/app/actions/students';
-import { computeProgressPercent } from '@/lib/student/progress';
 
 export type StudentProgressProps = {
   data: StudentProgressData | null;
 };
 
 export function StudentProgress({ data }: StudentProgressProps) {
-  // شريط تقدم بسيط يعتمد على الدرجة الأخيرة كنسبة مئوية
-  const percent = computeProgressPercent(data?.lastScore ?? null);
+  const examsPart =
+    data && (data.totalActiveExams ?? 0) > 0
+      ? 50 * Math.min(1, (data.examsTaken ?? 0) / (data.totalActiveExams ?? 1))
+      : 0;
+  const videosPart =
+    data && (data.totalActiveSessions ?? 0) > 0
+      ? 50 * Math.min(1, (data.sessionsWatched ?? 0) / (data.totalActiveSessions ?? 1))
+      : 0;
+  const percent = Math.round(examsPart + videosPart);
   return (
     <Box dir="rtl">
       <Stack spacing={1}>
@@ -32,7 +38,8 @@ export function StudentProgress({ data }: StudentProgressProps) {
         <Stack direction="row" spacing={2} justifyContent="space-between">
           <Typography variant="body2">النتيجة الأخيرة: {data?.lastScore ?? '--'}</Typography>
           <Typography variant="body2">الدراسة: {data?.totalStudyMinutes ?? 0} دقيقة</Typography>
-          <Typography variant="body2">الاختبارات: {data?.examsTaken ?? 0}</Typography>
+          <Typography variant="body2">الاختبارات: {(data?.examsTaken ?? 0)} / {(data?.totalActiveExams ?? 0)}</Typography>
+          <Typography variant="body2">الفيديوهات: {(data?.sessionsWatched ?? 0)} / {(data?.totalActiveSessions ?? 0)}</Typography>
         </Stack>
       </Stack>
     </Box>

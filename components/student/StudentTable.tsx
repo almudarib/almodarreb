@@ -13,6 +13,7 @@ import {
 } from '@mui/icons-material';
 import StudentActions from '@/components/student/StudentActions';
 import StudentDetailsModal from '@/components/student/StudentDetailsModal';
+import StudentEditModal from '@/components/student/StudentEditModal';
 import AddStudentModal from '@/components/student/AddStudentModal';
 import { updateStudent, type StudentRecord } from '@/app/actions/students';
 import { TextField as MuiTextField } from '@mui/material';
@@ -60,6 +61,7 @@ export function StudentTable({
   const params = useSearchParams();
   const [search, setSearch] = React.useState(initialSearch ?? '');
   const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [editOpen, setEditOpen] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
   const [status, setStatus] = React.useState<string | undefined>(undefined);
   const [showExams, setShowExams] = React.useState<boolean | undefined>(undefined);
@@ -88,6 +90,21 @@ export function StudentTable({
     }, 500);
     return () => window.clearTimeout(handle);
   }, [search, params, router]);
+
+  const formatDate = (value: string | null) => {
+    if (!value) return 'غير معرف';
+    const d = new Date(String(value));
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(d.getFullYear());
+    const h24 = d.getHours();
+    const isPm = h24 >= 12;
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    const hh = String(h12).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    const suffix = isPm ? 'م' : 'ص';
+    return `${dd}-${mm}-${yyyy}  ${hh}:${mi}${suffix}`;
+  };
 
   const columns: Column<StudentWithTeacher>[] = [
     {
@@ -120,6 +137,16 @@ export function StudentTable({
       ),
     },
     {
+      id: 'exam_datetime',
+      label: 'تاريخ الامتحان',
+      sortable: true,
+      render: (row) => (
+        <Typography variant="body2" color="text.secondary">
+          {formatDate(row.exam_datetime)}
+        </Typography>
+      ),
+    },
+    {
       id: 'notes',
       label: 'ملاحظات',
       render: (row) => <InlineNotes student={row} />,
@@ -129,7 +156,17 @@ export function StudentTable({
       label: 'خيارات',
       align: 'right',
       render: (row) => (
-        <StudentActions student={row} onOpenDetails={(s) => { setSelected(s as StudentWithTeacher); setDetailsOpen(true); }} />
+        <StudentActions
+          student={row}
+          onOpenDetails={(s) => {
+            setSelected(s as StudentWithTeacher);
+            setDetailsOpen(true);
+          }}
+          onOpenEdit={(s) => {
+            setSelected(s as StudentWithTeacher);
+            setEditOpen(true);
+          }}
+        />
       ),
     },
   ];
@@ -257,6 +294,7 @@ export function StudentTable({
         </Stack>
 
         <StudentDetailsModal open={detailsOpen} onClose={() => setDetailsOpen(false)} student={selected} teacherName={selected?.teacher_name} />
+        <StudentEditModal open={editOpen} onClose={() => setEditOpen(false)} student={selected} />
         <AddStudentModal open={addOpen} onClose={() => setAddOpen(false)} defaultTeacherId={defaultTeacherId} lockTeacher={lockTeacherAdd} />
       </StudentUIProvider>
     </Box>

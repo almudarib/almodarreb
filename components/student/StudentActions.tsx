@@ -16,16 +16,19 @@ import {
   deleteStudent,
 } from '@/app/actions/students';
 import { useRouter } from 'next/navigation';
+import { DeleteWarning } from '@/components/ui/DeleteWarning';
 
 export type StudentActionsProps = {
   student: StudentRecord;
   onOpenDetails: (student: StudentRecord) => void;
+  onOpenEdit: (student: StudentRecord) => void;
 };
 
-export function StudentActions({ student, onOpenDetails }: StudentActionsProps) {
+export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentActionsProps) {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const [confirmAction, setConfirmAction] = React.useState<null | 'devices' | 'delete' | 'pass' | 'fail'>(null);
 
   function handleOpen(e: React.MouseEvent<HTMLButtonElement>) {
     setAnchorEl(e.currentTarget);
@@ -42,40 +45,23 @@ export function StudentActions({ student, onOpenDetails }: StudentActionsProps) 
 
   async function handleDeleteDevices() {
     handleClose();
-    if (!confirm('هل أنت متأكد من حذف الأجهزة لهذا الطالب؟')) return;
-    const r = await deleteStudentDevices(student.id);
-    if (r.ok) router.refresh();
-    else alert(formatErrorMessage(r.error));
+    setConfirmAction('devices');
   }
   async function handlePass() {
     handleClose();
-    if (!confirm('تأكيد: سيتم حذف سجل الطالب نهائيًا كـ نجاح. متابعة؟')) return;
-    const r = await passStudentAndDelete(student.id);
-    if (r.ok) router.refresh();
-    else alert(formatErrorMessage(r.error));
+    setConfirmAction('pass');
   }
   async function handleFail() {
     handleClose();
-    if (
-      !confirm(
-        'تأكيد: سيتم مسح جلسات الطالب ونتائج الامتحانات وسجل الإجراءات وتعيين الحالة "راسب". متابعة؟',
-      )
-    )
-      return;
-    const r = await failStudentResetDetails(student.id);
-    if (r.ok) router.refresh();
-    else alert(formatErrorMessage(r.error));
+    setConfirmAction('fail');
   }
   async function handleDeleteStudent() {
     handleClose();
-    if (!confirm('تأكيد: سيتم حذف الطالب نهائيًا. متابعة؟')) return;
-    const r = await deleteStudent(student.id);
-    if (r.ok) router.refresh();
-    else alert(formatErrorMessage(r.error));
+    setConfirmAction('delete');
   }
   function handleEdit() {
     handleClose();
-    onOpenDetails(student);
+    onOpenEdit(student);
   }
 
   return (
@@ -148,6 +134,76 @@ export function StudentActions({ student, onOpenDetails }: StudentActionsProps) 
             onClick: handleEdit,
           },
         ]}
+      />
+      <DeleteWarning
+        open={confirmAction !== null}
+        title={
+          confirmAction === 'devices'
+            ? 'تأكيد حذف الأجهزة'
+            : confirmAction === 'delete'
+            ? 'تأكيد حذف الطالب'
+            : confirmAction === 'pass'
+            ? 'تأكيد جعل الطالب ناجح'
+            : confirmAction === 'fail'
+            ? 'تأكيد جعل الطالب راسب'
+            : 'تأكيد الإجراء'
+        }
+        entityName={student.name}
+        description={
+          confirmAction === 'devices'
+            ? 'سيتم حذف جميع الأجهزة المرتبطة بهذا الطالب نهائيًا.'
+            : confirmAction === 'delete'
+            ? 'سيتم حذف هذا الطالب نهائيًا ولا يمكن التراجع.'
+            : confirmAction === 'pass'
+            ? 'سيتم حذف سجل الطالب نهائيًا مع تسجيل الحالة كـ ناجح.'
+            : confirmAction === 'fail'
+            ? 'سيتم مسح جلسات الطالب ونتائج الامتحانات وتعيين الحالة "راسب".'
+            : undefined
+        }
+        impacts={
+          confirmAction === 'devices'
+            ? ['حذف جميع الأجهزة المسجلة للطالب']
+            : confirmAction === 'delete'
+            ? ['حذف الحساب نهائيًا', 'حذف سجلات المحاسبة', 'حذف سجل الإجراءات']
+            : confirmAction === 'pass'
+            ? ['حذف سجل الطالب نهائيًا']
+            : confirmAction === 'fail'
+            ? ['مسح جميع الجلسات', 'حذف نتائج الامتحانات', 'تعيين الحالة: راسب']
+            : undefined
+        }
+        confirmText={
+          confirmAction === 'devices'
+            ? 'تأكيد حذف الأجهزة'
+            : confirmAction === 'delete'
+            ? 'تأكيد حذف الطالب'
+            : confirmAction === 'pass'
+            ? 'تأكيد النجاح'
+            : confirmAction === 'fail'
+            ? 'تأكيد الرسوب'
+            : 'تأكيد'
+        }
+        cancelText="إلغاء"
+        onConfirm={async () => {
+          if (confirmAction === 'devices') {
+            const r = await deleteStudentDevices(student.id);
+            if (r.ok) router.refresh();
+            else alert(formatErrorMessage(r.error));
+          } else if (confirmAction === 'delete') {
+            const r = await deleteStudent(student.id);
+            if (r.ok) router.refresh();
+            else alert(formatErrorMessage(r.error));
+          } else if (confirmAction === 'pass') {
+            const r = await passStudentAndDelete(student.id);
+            if (r.ok) router.refresh();
+            else alert(formatErrorMessage(r.error));
+          } else if (confirmAction === 'fail') {
+            const r = await failStudentResetDetails(student.id);
+            if (r.ok) router.refresh();
+            else alert(formatErrorMessage(r.error));
+          }
+          setConfirmAction(null);
+        }}
+        onCancel={() => setConfirmAction(null)}
       />
     </>
   );

@@ -20,6 +20,7 @@ export type StudentRecord = {
   status: string;
   show_exams: boolean;
   teacher_id: number;
+  language: string;
   created_at: string;
   updated_at: string | null;
 };
@@ -174,6 +175,7 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
           'status',
           'show_exams',
           'teacher_id',
+          'language',
           'created_at',
           'updated_at',
         ].join(','),
@@ -201,6 +203,7 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
       status: (row.status as string | undefined) ?? 'active',
       show_exams: (row.show_exams as boolean | undefined) ?? true,
       teacher_id: row.teacher_id as number,
+      language: (row.language as string | undefined) ?? 'ar',
       created_at: row.created_at as string,
       updated_at: (row.updated_at as string | null) ?? null,
     };
@@ -347,6 +350,7 @@ export type UpdateStudentInput = {
   status?: string;
   show_exams?: boolean;
   teacher_id?: number;
+  language?: string;
 };
 
 export async function updateStudent(
@@ -400,6 +404,7 @@ export async function updateStudent(
     if (input.status !== undefined) payload.status = input.status;
     if (input.show_exams !== undefined) payload.show_exams = input.show_exams;
     if (input.teacher_id !== undefined) payload.teacher_id = input.teacher_id;
+    if (input.language !== undefined) payload.language = input.language;
     const { error } = await supabase.from('students').update(payload).eq('id', input.id);
     if (error) {
       return { ok: false, error: error.message, details: error };
@@ -1069,6 +1074,11 @@ export type StudentProgressData = {
   examsTaken: number;
   lastScore: number | null;
   expectedScore: number | null;
+  allExamsCompleted: boolean;
+  allVideosWatched: boolean;
+  totalActiveExams: number;
+  totalActiveSessions: number;
+  sessionsWatched: number;
 };
 
 export async function getStudentProgress(
@@ -1101,35 +1111,70 @@ export async function getStudentProgress(
     }
     const { data: sessions, error: sesErr } = await supabase
       .from('student_sessions')
-      .select('duration_minutes')
+      .select('session_id,duration_minutes')
       .eq('student_id', studentId);
     if (sesErr) {
       return { ok: false, error: sesErr.message, details: sesErr };
     }
     const totalStudyMinutes = (sessions ?? []).reduce(
-      (acc, s) => acc + (Number(s.duration_minutes) || 0),
+      (acc, s) => acc + (Number((s as any).duration_minutes) || 0),
       0,
     );
-
-    const { data: results, error: resErr } = await supabase
-      .from('exam_results')
-      .select('score,taken_at')
-      .eq('student_id', studentId)
-      .order('taken_at', { ascending: false })
-      .limit(1);
-    if (resErr) {
-      return { ok: false, error: resErr.message, details: resErr };
+    const watchedSessionIds = Array.from(
+      new Set(
+        (sessions ?? [])
+          .map((s) => (s as unknown as { session_id?: number }).session_id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
+    const { data: activeSessions, error: actSesErr } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('is_active', true);
+    if (actSesErr) {
+      return { ok: false, error: actSesErr.message, details: actSesErr };
     }
-    const latest = results && results.length > 0 ? results[0] : null;
-    const lastScore = latest ? (latest.score as number) : null;
+    const totalActiveSessions = (activeSessions ?? []).length;
+    const allVideosWatched = totalActiveSessions > 0 && watchedSessionIds.length >= totalActiveSessions;
+
+    const { data: resultsAll, error: resErrAll } = await supabase
+      .from('exam_results')
+      .select('exam_id,score,taken_at')
+      .eq('student_id', studentId)
+      .order('taken_at', { ascending: false });
+    if (resErrAll) {
+      return { ok: false, error: resErrAll.message, details: resErrAll };
+    }
+    const distinctExams = Array.from(
+      new Set(
+        (resultsAll ?? [])
+          .map((r) => (r as unknown as { exam_id?: number }).exam_id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
+    const lastScore = resultsAll && resultsAll.length > 0 ? (resultsAll[0] as any).score as number : null;
+    const { data: activeExams, error: actExErr } = await supabase
+      .from('exams')
+      .select('id')
+      .eq('is_active', true);
+    if (actExErr) {
+      return { ok: false, error: actExErr.message, details: actExErr };
+    }
+    const totalActiveExams = (activeExams ?? []).length;
+    const allExamsCompleted = totalActiveExams > 0 && distinctExams.length >= totalActiveExams;
 
     return {
       ok: true,
       progress: {
         totalStudyMinutes,
-        examsTaken: results ? results.length : 0,
+        examsTaken: distinctExams.length,
         lastScore,
         expectedScore: lastScore,
+        allExamsCompleted,
+        allVideosWatched,
+        totalActiveExams: totalActiveExams,
+        totalActiveSessions: totalActiveSessions,
+        sessionsWatched: watchedSessionIds.length,
       },
     };
   } catch (error) {
@@ -1295,6 +1340,7 @@ export async function listStudents(
           'status',
           'show_exams',
           'teacher_id',
+          'language',
           'created_at',
           'updated_at',
         ].join(','),
@@ -1405,6 +1451,7 @@ export async function listStudents(
         status: (r.status as string | undefined) ?? 'active',
         show_exams: (r.show_exams as boolean | undefined) ?? true,
         teacher_id: r.teacher_id as number,
+        language: (r.language as string | undefined) ?? 'ar',
         created_at: r.created_at as string,
         updated_at: (r.updated_at as string | null) ?? null,
       };
