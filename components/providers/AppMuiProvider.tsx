@@ -4,15 +4,30 @@ import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/st
 import CssBaseline from '@mui/material/CssBaseline';
 import createCache from '@emotion/cache';
 import { CacheProvider } from '@emotion/react';
+import { useServerInsertedHTML } from 'next/navigation';
 
 export function AppMuiProvider({ children }: { children: React.ReactNode }) {
-  const cache = React.useMemo(() => {
+  const [cache] = React.useState(() => {
     let insertionPoint: HTMLElement | undefined = undefined;
     if (typeof document !== 'undefined') {
       insertionPoint = document.querySelector('meta[name="emotion-insertion-point"]') as HTMLElement | null || undefined;
     }
-    return createCache({ key: 'mui', insertionPoint, prepend: true });
-  }, []);
+    const c = createCache({ key: 'mui', insertionPoint, prepend: true });
+    c.compat = true;
+    return c;
+  });
+  useServerInsertedHTML(() => {
+    const names = Object.keys(cache.inserted);
+    if (names.length === 0) return null;
+    return (
+      <style
+        data-emotion={`${cache.key} ${names.join(' ')}`}
+        dangerouslySetInnerHTML={{
+          __html: names.map((n) => cache.inserted[n]).join(' '),
+        }}
+      />
+    );
+  });
   const theme = React.useMemo(
     () =>
       createTheme({
