@@ -217,22 +217,15 @@ import { VisibilityOutlined, DeleteOutline } from '@mui/icons-material';
       setToast({ open: true, kind: 'error', msg: 'القيمة الافتراضية غير صالحة' });
       return;
     }
-    const teacherIds = stats.map((s) => s.teacher_id);
-    let totalInserted = 0;
-    let totalDeleted = 0;
-    for (const tid of teacherIds) {
-      const r = await initializeDefaultFeeForTeacher(tid, fee, { overwriteExisting: true });
-      if (!r.ok) {
-        setToast({ open: true, kind: 'error', msg: r.error });
-        return;
-      }
-      totalInserted += r.inserted;
-      totalDeleted += r.deleted;
+    const res = await initializeDefaultFeeForAllTeachers(fee, { overwriteExisting: true });
+    if (!res.ok) {
+      setToast({ open: true, kind: 'error', msg: res.error });
+      return;
     }
     setToast({
       open: true,
       kind: 'success',
-      msg: `تم تهيئة الرسوم الافتراضية لعدد ${formatNumberEn(teacherIds.length)} أستاذ بقيمة ${formatCurrency(fee)}. أضيفت ${formatNumberEn(totalInserted)} وحُذفت ${formatNumberEn(totalDeleted)}`,
+      msg: `تم ضبط القيمة الافتراضية لجميع الأساتذة بقيمة ${formatCurrency(fee)}. أضيفت ${formatNumberEn(res.total_inserted)} وحُذفت ${formatNumberEn(res.total_deleted)}`,
     });
     setInitOpen(false);
     await loadStats();

@@ -3,21 +3,21 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Box, Stack, Typography, List, ListItemButton, ListItemText, Divider, ListItemIcon, Avatar, Tooltip } from '@mui/material';
-import { DashboardRounded, SchoolRounded, SettingsRounded, PaidRounded } from '@mui/icons-material';
+import { Box, Stack, Typography, List, ListItemButton, ListItemText, ListItemIcon, Avatar, Tooltip, IconButton } from '@mui/material';
+import { DashboardRounded, SchoolRounded, PaidRounded, MenuOpenRounded, MenuRounded } from '@mui/icons-material';
 import { LogoutButton } from '@/components/logout-button';
 
 const PALETTE = {
+  sidebarBg: 'var(--brand-teal)',
   primary: 'var(--brand-teal)',
   gold: 'var(--brand-gold)',
-  dark: 'var(--brand-dark)',
-  sidebarBg: 'var(--brand-teal)',
-  activeLight: 'var(--brand-teal-13)',
   goldDark: 'var(--brand-gold-dark)',
 };
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const sidebarWidth = isCollapsed ? 85 : 280;
 
   const links = [
     { href: '/teacher', label: 'لوحة الأستاذ', icon: <DashboardRounded /> },
@@ -30,7 +30,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       <Box
         component="aside"
         sx={{
-          width: 280,
+          width: sidebarWidth,
           bgcolor: PALETTE.sidebarBg,
           color: 'white',
           position: 'sticky',
@@ -38,86 +38,103 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '10px 0 30px rgba(0,0,0,0.2)',
+          boxShadow: '10px 0 30px rgba(0,0,0,0.15)',
           zIndex: 1100,
+          transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'hidden',
         }}
       >
-        <Box sx={{ p: 3, mb: 2 }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-            <Avatar sx={{ bgcolor: PALETTE.primary, width: 45, height: 45, fontWeight: 'bold' }}>T</Avatar>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2, color: 'white' }}>
+        <Box sx={{ p: 2, height: 80, display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          {!isCollapsed && (
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Avatar sx={{ bgcolor: 'white', color: PALETTE.primary, width: 35, height: 35, fontWeight: 'bold', fontSize: '1rem' }}>T</Avatar>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, whiteSpace: 'nowrap', fontSize: '1.1rem' }}>
                 لوحة <span style={{ color: PALETTE.gold }}>الأستاذ</span>
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                إدارة الطلاب والمحتوى
-              </Typography>
-            </Box>
-          </Stack>
+            </Stack>
+          )}
+          <IconButton 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            sx={{ 
+              color: isCollapsed ? PALETTE.goldDark : 'white', 
+              bgcolor: 'rgba(255,255,255,0.05)',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' },
+              transition: '0.3s'
+            }}
+          >
+            {isCollapsed ? <MenuRounded /> : <MenuOpenRounded />}
+          </IconButton>
         </Box>
 
-        <Box sx={{ flexGrow: 1, px: 2, overflowY: 'auto' }}>
-          <Typography variant="overline" sx={{ px: 2, color: 'rgba(255,255,255,0.3)', fontWeight: 700 }}>
-            القائمة
-          </Typography>
-          <List sx={{ mt: 1 }}>
+        <Box sx={{ flexGrow: 1, px: 1.5, py: 3, overflowY: 'auto', overflowX: 'hidden' }}>
+          <List>
             {links.map((link) => {
               const active = pathname === link.href || pathname.startsWith(link.href + '/');
               return (
-                <ListItemButton
-                  key={link.href}
-                  component={Link}
-                  href={link.href}
-                  selected={active}
-                  sx={{
-                    borderRadius: '12px',
-                    mb: 0.8,
-                    py: 1.2,
-                    transition: 'all 0.2s ease-in-out',
-                    '&.Mui-selected': {
-                      bgcolor: PALETTE.goldDark,
-                      color: 'white',
-                      '&:hover': { bgcolor: PALETTE.goldDark },
-                      '& .MuiListItemIcon-root': { color: 'white' },
-                    },
-                    '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.08)',
-                      transform: 'scale(1.02)',
-                    }
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: 40, color: active ? 'white' : 'rgba(255,255,255,0.6)', transition: '0.2s' }}>
-                    {link.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={link.label}
-                    primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: active ? 600 : 400 }}
-                  />
-                </ListItemButton>
+                <Tooltip key={link.href} title={isCollapsed ? link.label : ""} placement="left">
+                  <ListItemButton
+                    component={Link}
+                    href={link.href}
+                    selected={active}
+                    sx={{
+                      borderRadius: '12px',
+                      mb: 1,
+                      py: 1.5,
+                      justifyContent: isCollapsed ? 'center' : 'flex-start',
+                      px: isCollapsed ? 0 : 2,
+                      '&.Mui-selected': {
+                        bgcolor: PALETTE.goldDark,
+                        color: 'white',
+                        '&:hover': { bgcolor: PALETTE.goldDark },
+                        '& .MuiListItemIcon-root': { color: 'white' },
+                      },
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.08)',
+                      }
+                    }}
+                  >
+                    <ListItemIcon sx={{ 
+                      minWidth: isCollapsed ? 0 : 40, 
+                      color: active ? 'white' : 'rgba(255,255,255,0.7)',
+                      justifyContent: 'center'
+                    }}>
+                      {link.icon}
+                    </ListItemIcon>
+                    {!isCollapsed && (
+                      <ListItemText 
+                        primary={link.label} 
+                        primaryTypographyProps={{ 
+                          fontSize: '0.95rem', 
+                          fontWeight: active ? 700 : 500,
+                          whiteSpace: 'nowrap'
+                        }} 
+                      />
+                    )}
+                  </ListItemButton>
+                </Tooltip>
               );
             })}
           </List>
         </Box>
 
-        <Box sx={{ p: 2, mt: 'auto' }}>
-          <Box
+        <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <LogoutButton
+            variant={isCollapsed ? "text" : "contained"}
+            fullWidth={!isCollapsed}
+            isCollapsed={isCollapsed} 
             sx={{
-              p: 2,
-              borderRadius: '16px',
-              bgcolor: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              mb: 2,
+              minWidth: isCollapsed ? 0 : 'auto',
+              bgcolor: isCollapsed ? 'transparent' : PALETTE.goldDark,
+              color: isCollapsed ? PALETTE.goldDark : 'white',
+              '&.MuiButton-text': { color: PALETTE.goldDark },
+              '&:hover': { 
+                bgcolor: isCollapsed ? 'rgba(255,255,255,0.1)' : PALETTE.goldDark 
+              },
+              display: 'flex',
+              justifyContent: 'center',
+              mx: 'auto'
             }}
-          >
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>v1.0.0</Typography>
-              <Tooltip title="الإعدادات">
-                <SettingsRounded sx={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }} />
-              </Tooltip>
-            </Stack>
-            <Divider sx={{ my: 1.5, bgcolor: 'rgba(255,255,255,0.05)' }} />
-            <LogoutButton variant="contained" fullWidth sx={{ bgcolor: 'rgba(255,255,255,0.05)', '&:hover': { bgcolor: '#d32f2f' } }} />
-          </Box>
+          />
         </Box>
       </Box>
 
@@ -128,26 +145,19 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           display: 'flex',
           flexDirection: 'column',
           minHeight: '100vh',
-          position: 'relative',
+          width: `calc(100% - ${sidebarWidth}px)`,
+          transition: 'margin 0.4s ease',
         }}
       >
-        <Box
-          sx={{
-            height: 70,
-            bgcolor: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            px: 4,
-            boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-            borderBottom: '1px solid #E0E0E0',
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700, color: PALETTE.primary }}>
+        <Box sx={{ height: 80, bgcolor: 'white', display: 'flex', alignItems: 'center', px: 4, borderBottom: '1px solid #eee', position: 'sticky', top: 0, zIndex: 1000 }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: PALETTE.primary }}>
             {links.find((l) => pathname.startsWith(l.href))?.label || 'لوحة الأستاذ'}
           </Typography>
         </Box>
 
-        <Box sx={{ p: 4, flex: 1, overflowY: 'auto' }}>{children}</Box>
+        <Box sx={{ p: { xs: 2, md: 4 }, flex: 1 }}>
+          {children}
+        </Box>
       </Box>
     </Box>
   );

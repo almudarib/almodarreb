@@ -3,8 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import StudentTable, { type StudentWithTeacher } from '@/components/student/StudentTable';
 import { Suspense } from 'react';
-import { Container, Stack, Typography, Alert, Box } from '@mui/material';
+import { Container, Stack, Typography, Alert, Box, Grid } from '@mui/material';
 import { Card, CardContent } from '@/components/ui';
+import { PeopleRounded, SchoolRounded, PendingActionsRounded } from '@mui/icons-material';
 
 async function StudentsContent({
   searchParams,
@@ -14,81 +15,32 @@ async function StudentsContent({
   const sp = await searchParams;
   const q = {
     status: typeof sp.status === 'string' ? sp.status : undefined,
-    teacher_id:
-      typeof sp.teacher_id === 'string'
-        ? Number(sp.teacher_id)
-        : undefined,
+    teacher_id: typeof sp.teacher_id === 'string' ? Number(sp.teacher_id) : undefined,
     search: typeof sp.search === 'string' ? sp.search : undefined,
-    show_exams:
-      typeof sp.show_exams === 'string'
-        ? sp.show_exams === 'true'
-        : undefined,
-    exam_datetime_from:
-      typeof sp.exam_datetime_from === 'string'
-        ? sp.exam_datetime_from
-        : undefined,
-    exam_datetime_to:
-      typeof sp.exam_datetime_to === 'string'
-        ? sp.exam_datetime_to
-        : undefined,
-    registration_date_from:
-      typeof sp.registration_date_from === 'string'
-        ? sp.registration_date_from
-        : undefined,
-    registration_date_to:
-      typeof sp.registration_date_to === 'string'
-        ? sp.registration_date_to
-        : undefined,
-    created_at_from:
-      typeof sp.created_at_from === 'string'
-        ? sp.created_at_from
-        : undefined,
-    created_at_to:
-      typeof sp.created_at_to === 'string'
-        ? sp.created_at_to
-        : undefined,
-    sort_by:
-      typeof sp.sort_by === 'string'
-        ? (sp.sort_by as 'created_at' | 'name' | 'exam_datetime' | 'registration_date')
-        : 'created_at',
-    sort_dir:
-      typeof sp.sort_dir === 'string'
-        ? (sp.sort_dir as 'asc' | 'desc')
-        : 'desc',
-    page:
-      typeof sp.page === 'string' ? Math.max(1, Number(sp.page)) : 1,
-    per_page:
-      typeof sp.per_page === 'string'
-        ? Math.max(1, Math.min(200, Number(sp.per_page)))
-        : 20,
+    show_exams: typeof sp.show_exams === 'string' ? sp.show_exams === 'true' : undefined,
+    sort_by: (sp.sort_by as any) || 'created_at',
+    sort_dir: (sp.sort_dir as any) || 'desc',
+    page: typeof sp.page === 'string' ? Math.max(1, Number(sp.page)) : 1,
+    per_page: typeof sp.per_page === 'string' ? Math.max(1, Math.min(200, Number(sp.per_page))) : 20,
   };
 
   const res = await listStudents(q);
   if (!res.ok) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
-        <Alert severity="error" sx={{ borderRadius: '12px' }}>
-          {res.error}
-        </Alert>
+        <Alert severity="error" sx={{ borderRadius: '16px', fontWeight: 600 }}>{res.error}</Alert>
       </Container>
     );
   }
 
+  // --- منطق جلب أسماء المعلمين ---
   const students = res.students;
-  const teacherIds = Array.from(
-    new Set(students.map((s) => s.teacher_id).filter((id) => typeof id === 'number')),
-  ) as number[];
-
+  const teacherIds = Array.from(new Set(students.map((s) => s.teacher_id).filter((id) => typeof id === 'number'))) as number[];
   let teacherNameById = new Map<number, string>();
   if (teacherIds.length > 0) {
     const supabase = createAdminClient();
-    const { data: usersRows } = await supabase
-      .from('users')
-      .select('id,name')
-      .in('id', teacherIds);
-    teacherNameById = new Map<number, string>(
-      (usersRows ?? []).map((u) => [u.id as number, (u.name as string) ?? '']),
-    );
+    const { data: usersRows } = await supabase.from('users').select('id,name').in('id', teacherIds);
+    teacherNameById = new Map<number, string>((usersRows ?? []).map((u) => [u.id as number, u.name as string]));
   }
 
   const withTeacher: StudentWithTeacher[] = students.map((s) => ({
@@ -96,6 +48,7 @@ async function StudentsContent({
     teacher_name: teacherNameById.get(s.teacher_id),
   }));
 
+  // --- تحديد معرّف المعلم الحالي للحفاظ على قيود المعلم ---
   const supa = await createServerClient();
   const { data: u } = await supa.auth.getUser();
   const uid = u.user?.id ?? null;
@@ -111,24 +64,57 @@ async function StudentsContent({
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+      {/* Header مع لمسة جمالية */}
+      <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} justifyContent="space-between" sx={{ mb: 4 }} spacing={2}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>إدارة الطلاب</Typography>
-          <Typography variant="body2" sx={{ color: 'var(--neutral-700)', mt: 0.5 }}>
-            عرض، بحث، وتصفية سجلات الطلاب
+          <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--brand-dark)', letterSpacing: '-0.5px' }}>
+            إدارة <span style={{ color: 'var(--brand-teal)' }}>الطلاب</span>
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'var(--neutral-600)', mt: 0.5, fontWeight: 500 }}>
+            يمكنك متابعة تسجيلات الطلاب، الفلترة حسب المعلم، ومراجعة حالات الدفع والاختبارات.
           </Typography>
         </Box>
       </Stack>
-      <Card>
+
+      {/* بطاقات إحصائية سريعة (Quick Stats) */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[
+          { label: 'إجمالي الطلاب', value: res.total, icon: <PeopleRounded />, color: 'var(--brand-teal)' },
+          { label: 'نشط حالياً', value: students.length, icon: <SchoolRounded />, color: 'var(--brand-gold)' },
+        ].map((stat, i) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+            <Card sx={{ border: '1px solid var(--neutral-200)', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+              <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ p: 1.5, borderRadius: '14px', bgcolor: `${stat.color}15`, color: stat.color, display: 'flex' }}>
+                  {stat.icon}
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'var(--neutral-500)', fontWeight: 700, display: 'block' }}>{stat.label}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800 }}>{stat.value}</Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* حاوية الجدول الرئيسية */}
+      <Card sx={{ 
+        borderRadius: '24px', 
+        border: '1px solid var(--neutral-200)', 
+        boxShadow: '0 10px 40px rgba(0,0,0,0.04)',
+        overflow: 'hidden',
+        bgcolor: 'white'
+      }}>
         <CardContent sx={{ p: 0 }}>
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ p: { xs: 1, md: 2 } }}>
             <StudentTable
               students={withTeacher}
               page={res.page}
               perPage={res.perPage}
               total={res.total}
-              sortBy={q.sort_by ?? 'created_at'}
-              sortDir={q.sort_dir ?? 'desc'}
+              sortBy={q.sort_by}
+              sortDir={q.sort_dir}
               initialSearch={q.search}
               defaultTeacherId={currentTeacherId}
               lockTeacherAdd
@@ -149,11 +135,11 @@ export default function Page({
     <Suspense
       fallback={
         <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
-          <Card>
-            <CardContent>
-              <Typography>جارٍ التحميل...</Typography>
-            </CardContent>
-          </Card>
+           <Box sx={{ height: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ width: 40, height: 40, border: '4px solid #f3f3f3', borderTop: '4px solid var(--brand-teal)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <Typography sx={{ color: 'var(--neutral-500)', fontWeight: 600 }}>جارٍ تحضير قوائم الطلاب...</Typography>
+           </Box>
+           <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
         </Container>
       }
     >

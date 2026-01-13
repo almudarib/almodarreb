@@ -6,6 +6,7 @@ import {
   validateAddStudentInput,
   validateListStudentsQuery,
 } from '@/lib/validation/students';
+import { addAccountingCharge } from '@/app/actions/accounting';
 
 export type StudentRecord = {
   id: number;
@@ -207,6 +208,30 @@ export async function addStudent(input: AddStudentInput): Promise<AddStudentResu
       created_at: row.created_at as string,
       updated_at: (row.updated_at as string | null) ?? null,
     };
+    try {
+      const { data: feeRow } = await supabase
+        .from('teacher_accounting_settings')
+        .select('per_student_fee')
+        .eq('teacher_id', payload.teacher_id)
+        .maybeSingle();
+      const fee = Number((feeRow?.per_student_fee as number | undefined) ?? 0);
+      if (Number.isFinite(fee) && fee > 0) {
+        const acc = await addAccountingCharge({
+          student_id: student.id,
+          teacher_id: payload.teacher_id,
+          amount: fee,
+        });
+        if (acc.ok) {
+          try {
+            await supabase.from('student_actions').insert({
+              student_id: student.id,
+              action: 'acc_add_on_create',
+              action_by: userId as number,
+            });
+          } catch {}
+        }
+      }
+    } catch {}
     return { ok: true, student };
   } catch (error) {
     return {
