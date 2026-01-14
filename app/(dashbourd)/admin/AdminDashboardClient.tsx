@@ -72,6 +72,17 @@ export default function AdminDashboardClient({ initialStats, initialAccStats }: 
     [stats],
   );
 
+  const accData = React.useMemo(() => {
+    const arr = accStats.map((s) => ({
+      id: String(s.teacher_id ?? (s.teacher_name ?? '')),
+      name: s.teacher_name || `#${s.teacher_id}`,
+      amount: s.total_due,
+    }));
+    const map = new Map<string, string>();
+    for (const d of arr) map.set(d.id, d.name);
+    return { arr, map };
+  }, [accStats]);
+
   return (
     <Container maxWidth="lg" sx={{ py: 5, minHeight: '100vh', bgcolor: '#f8fafc' }} dir="rtl">
       <Stack spacing={4}>
@@ -199,9 +210,9 @@ export default function AdminDashboardClient({ initialStats, initialAccStats }: 
           <CardContent>
             <Box height={400}>
               <ResponsiveBar
-                data={accStats.map((s) => ({ name: s.teacher_name || `#${s.teacher_id}`, amount: s.total_due }))}
+                data={accData.arr}
                 keys={['amount']}
-                indexBy="name"
+                indexBy="id"
                 colors={cssVar('--brand-teal', '#0D2F57')}
                 enableLabel={true}
                 labelSkipWidth={12}
@@ -209,6 +220,10 @@ export default function AdminDashboardClient({ initialStats, initialAccStats }: 
                 labelTextColor="#ffffff"
                 margin={{ top: 20, right: 20, bottom: 80, left: 60 }}
                 padding={0.3}
+                axisBottom={{
+                  format: (v: string | number) => accData.map.get(String(v)) ?? String(v),
+                  tickRotation: -12,
+                }}
               />
             </Box>
             <Stack alignItems="end" mt={3}>
