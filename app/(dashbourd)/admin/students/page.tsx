@@ -21,7 +21,7 @@ async function StudentsContent({
     sort_by: (sp.sort_by as any) || 'created_at',
     sort_dir: (sp.sort_dir as any) || 'desc',
     page: typeof sp.page === 'string' ? Math.max(1, Number(sp.page)) : 1,
-    per_page: typeof sp.per_page === 'string' ? Math.max(1, Math.min(200, Number(sp.per_page))) : 20,
+    per_page: typeof sp.per_page === 'string' ? Math.max(1, Math.min(200, Number(sp.per_page))) : 10,
   };
 
   const res = await listStudents(q);
@@ -66,7 +66,6 @@ async function StudentsContent({
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {[
           { label: 'إجمالي الطلاب', value: res.total, icon: <PeopleRounded />, color: 'var(--brand-teal)' },
-          { label: 'نشط حالياً', value: students.length, icon: <SchoolRounded />, color: 'var(--brand-gold)' },
         ].map((stat, i) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
             <Card sx={{ border: '1px solid var(--neutral-200)', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>

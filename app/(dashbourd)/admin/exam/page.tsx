@@ -13,7 +13,7 @@ import {
   Divider,
 } from '@mui/material';
 import { Input, Card, CardHeader, CardContent, CardActions, Button, Modal, Form, Table, Menu, DeleteWarning } from '@/components/ui';
-import { type ExamRecord, createExam, listExams, type ListExamsQuery, updateExam, deleteExam } from '@/app/actions/exam';
+import { type ExamRecord, createExam, listExams, type ListExamsQuery, updateExam, deleteExam, listExamGroups, type ExamGroupRecord, createExamGroup } from '@/app/actions/exam';
 import { Search, MoreVert, EditOutlined, DeleteOutline, LanguageRounded } from '@mui/icons-material';
 
 function AddExamForm({
@@ -27,11 +27,36 @@ function AddExamForm({
   const [language, setLanguage] = React.useState<'ar' | 'en' | 'tr' | ''>('');
   const [duration, setDuration] = React.useState<number | ''>('');
   const [isActive, setIsActive] = React.useState(true);
+  const [groupId, setGroupId] = React.useState<number | ''>('');
+  const [groups, setGroups] = React.useState<ExamGroupRecord[]>([]);
+  const [loadingGroups, setLoadingGroups] = React.useState(false);
+  const [groupsError, setGroupsError] = React.useState<string | null>(null);
 
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [successOpen, setSuccessOpen] = React.useState(false);
+
+  const loadGroups = React.useCallback(async () => {
+    setLoadingGroups(true);
+    try {
+      const res = await listExamGroups();
+      if (res.ok) {
+        setGroups(res.groups);
+        setGroupsError(null);
+      } else {
+        setGroupsError(res.error);
+      }
+    } finally {
+      setLoadingGroups(false);
+    }
+  }, []);
+  React.useEffect(() => { loadGroups(); }, [loadGroups]);
+  React.useEffect(() => {
+    if (!groupId || groups.length === 0) return;
+    const g = groups.find((x) => x.id === groupId);
+    if (g) setLanguage(g.language as 'ar' | 'en' | 'tr');
+  }, [groupId, groups]);
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -39,6 +64,7 @@ function AddExamForm({
     if (!language) errs.language = 'اللغة مطلوبة';
     const dur = typeof duration === 'string' ? Number(duration) : duration;
     if (!Number.isInteger(dur) || (dur as number) <= 0) errs.duration = 'المدة يجب أن تكون عددًا صحيحًا موجبًا';
+    if (!Number.isInteger(groupId) || (groupId as number) <= 0) errs.group_id = 'اختر مجموعة صالحة';
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -50,6 +76,7 @@ function AddExamForm({
     setSubmitting(true);
     try {
       const res = await createExam({
+        group_id: Number(groupId),
         title: title.trim(),
         language,
         duration_minutes: Number(duration),
@@ -64,6 +91,7 @@ function AddExamForm({
       setLanguage('');
       setDuration('');
       setIsActive(true);
+      setGroupId('');
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
@@ -102,6 +130,30 @@ function AddExamForm({
             </Box>
             <Box>
               <Input
+                label="المجموعة"
+                select
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value === '' ? '' : Number(e.target.value))}
+                required
+                fullWidth
+                error={!!fieldErrors.group_id}
+                helperText={fieldErrors.group_id}
+              >
+                {loadingGroups ? (
+                  <MenuItem value="" disabled>جاري التحميل...</MenuItem>
+                ) : groupsError ? (
+                  <MenuItem value="" disabled>تعذر تحميل المجموعات: {groupsError}</MenuItem>
+                ) : groups.length === 0 ? (
+                  <MenuItem value="" disabled>لا توجد مجموعات متاحة</MenuItem>
+                ) : (
+                  groups.map((g) => (
+                    <MenuItem key={g.id} value={g.id}>{g.title}</MenuItem>
+                  ))
+                )}
+              </Input>
+            </Box>
+            <Box>
+              <Input
                 label="اللغة"
                 select
                 value={language}
@@ -110,6 +162,7 @@ function AddExamForm({
                 fullWidth
                 error={!!fieldErrors.language}
                 helperText={fieldErrors.language}
+                disabled
               >
                 <MenuItem value="ar">العربية</MenuItem>
                 <MenuItem value="en">الإنجليزية</MenuItem>
@@ -158,11 +211,136 @@ function AddExamForm({
   );
 }
 
+function AddExamGroupForm({
+  onCreated,
+  formId,
+}: {
+  onCreated: () => void;
+  formId?: string;
+}) {
+  const [title, setTitle] = React.useState('');
+  const [language, setLanguage] = React.useState<'ar' | 'en' | 'tr' | ''>('');
+  const [isActive, setIsActive] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  const [successOpen, setSuccessOpen] = React.useState(false);
+
+  function validate() {
+    const errs: Record<string, string> = {};
+    if (!String(title).trim()) errs.title = 'العنوان مطلوب';
+    if (!language) errs.language = 'اللغة مطلوبة';
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!validate()) return;
+    setSubmitting(true);
+    try {
+      const res = await createExamGroup({
+        title: title.trim(),
+        language,
+        is_active: isActive,
+      });
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+      setSuccessOpen(true);
+      setTitle('');
+      setLanguage('');
+      setIsActive(true);
+      onCreated();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card elevation={0}>
+      <CardHeader title="إضافة مجموعة امتحانات" />
+      <CardContent>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        <Form id={formId} onSubmit={handleSubmit}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Input
+                label="عنوان المجموعة"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+                fullWidth
+                error={!!fieldErrors.title}
+                helperText={fieldErrors.title}
+              />
+            </Box>
+            <Box>
+              <Input
+                label="اللغة"
+                select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as 'ar' | 'en' | 'tr')}
+                required
+                fullWidth
+                error={!!fieldErrors.language}
+                helperText={fieldErrors.language}
+              >
+                <MenuItem value="ar">العربية</MenuItem>
+                <MenuItem value="en">الإنجليزية</MenuItem>
+                <MenuItem value="tr">التركية</MenuItem>
+              </Input>
+            </Box>
+            <Box>
+              <Input
+                label="حالة المجموعة"
+                select
+                value={isActive ? 'active' : 'inactive'}
+                onChange={(e) => setIsActive((e.target.value as string) === 'active')}
+                fullWidth
+              >
+                <MenuItem value="active">نشط</MenuItem>
+                <MenuItem value="inactive">غير نشط</MenuItem>
+              </Input>
+            </Box>
+          </Box>
+          <CardActions sx={{ mt: 2, justifyContent: 'flex-end' }}>
+            <Button type="submit" variant="contained" loading={submitting}>
+              حفظ
+            </Button>
+          </CardActions>
+        </Form>
+        <Snackbar
+          open={successOpen}
+          autoHideDuration={3000}
+          onClose={() => setSuccessOpen(false)}
+          message="تم إنشاء المجموعة بنجاح"
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
 function ExamsTable() {
   const [exams, setExams] = React.useState<ExamRecord[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const [groups, setGroups] = React.useState<Map<number, string>>(new Map());
 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [languageFilter, setLanguageFilter] = React.useState<'all' | 'ar' | 'en' | 'tr'>('all');
@@ -181,6 +359,12 @@ function ExamsTable() {
     setLoading(true);
     setError(null);
     try {
+      const gs = await listExamGroups();
+      if (gs.ok) {
+        const m = new Map<number, string>();
+        for (const g of gs.groups) m.set(g.id, g.title);
+        setGroups(m);
+      }
       const q: ListExamsQuery = {
         language: languageFilter === 'all' ? undefined : languageFilter,
         search: searchQuery ? searchQuery : undefined,
@@ -335,6 +519,16 @@ function ExamsTable() {
           columns={[
             { id: 'id', label: '#' },
             { id: 'title', label: 'عنوان الامتحان', sortable: true },
+            {
+              id: 'group_id',
+              label: 'المجموعة',
+              render: (e: ExamRecord) => (
+                <Chip
+                  label={groups.get(e.group_id) ?? `#${e.group_id}`}
+                  size="small"
+                />
+              ),
+            },
             {
               id: 'language',
               label: 'اللغة',
@@ -575,6 +769,7 @@ function EditExamModal({
 }
 export default function AdminExamPage() {
   const [addOpen, setAddOpen] = React.useState(false);
+  const [addGroupOpen, setAddGroupOpen] = React.useState(false);
   const [reloadKey, setReloadKey] = React.useState(0);
 
   return (
@@ -586,9 +781,14 @@ export default function AdminExamPage() {
             إضافة، بحث، وتصفية الامتحانات حسب اللغة والحالة
           </Typography>
         </Box>
-        <Button variant="contained" onClick={() => setAddOpen(true)}>
-          إضافة امتحان
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={() => setAddGroupOpen(true)}>
+            إضافة مجموعة
+          </Button>
+          <Button variant="contained" onClick={() => setAddOpen(true)}>
+            إضافة امتحان
+          </Button>
+        </Stack>
       </Stack>
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ p: 0 }}>
@@ -597,6 +797,33 @@ export default function AdminExamPage() {
           </Box>
         </CardContent>
       </Card>
+      <Modal
+        open={addGroupOpen}
+        onClose={() => setAddGroupOpen(false)}
+        title="إضافة مجموعة امتحانات"
+        submitText="حفظ"
+        cancelText="إلغاء"
+        onSubmit={() => {
+          const form = document.getElementById('add-exam-group-form') as HTMLFormElement | null;
+          if (form && typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else if (form) {
+            const evt = new Event('submit', { bubbles: true, cancelable: true });
+            form.dispatchEvent(evt);
+          }
+        }}
+        onCancel={() => setAddGroupOpen(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <AddExamGroupForm
+          formId="add-exam-group-form"
+          onCreated={() => {
+            setAddGroupOpen(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      </Modal>
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}

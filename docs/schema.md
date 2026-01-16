@@ -54,16 +54,31 @@ CREATE TABLE student_devices (
         REFERENCES students(id)
         ON DELETE CASCADE
 );
+جدول EXAM_GROUPS
+CREATE TABLE exam_groups (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL, -- مثال: قواعد السير - الميكانيك
+    language language_type NOT NULL, -- ar / en / tr
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 4️⃣ جدول EXAMS
 CREATE TABLE exams (
     id BIGSERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
+    group_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL, -- مثال: اختبار رقم 1
     language language_type NOT NULL,
     duration_minutes INTEGER NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_exams_group
+        FOREIGN KEY (group_id)
+        REFERENCES exam_groups(id)
+        ON DELETE CASCADE
 );
+
 
 5️⃣ جدول EXAM_QUESTIONS
 CREATE TABLE exam_questions (

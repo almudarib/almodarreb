@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export type ExamRecord = {
   id: number;
+  group_id: number;
   title: string;
   language: string;
   duration_minutes: number;
@@ -24,6 +25,7 @@ export type QuestionRecord = {
 };
 
 type CreateExamInput = {
+  group_id: number;
   title: string;
   language: string;
   duration_minutes: number;
@@ -34,10 +36,13 @@ export async function createExam(
   input: CreateExamInput,
 ): Promise<{ ok: true; exam: ExamRecord } | { ok: false; error: string; details?: unknown }> {
   try {
+    if (!Number.isInteger(input?.group_id) || (input?.group_id as number) <= 0) {
+      return { ok: false, error: 'group_id غير صالح' };
+    }
     const title = String(input?.title ?? '').trim();
     const langRaw = String(input?.language ?? '').trim().toLowerCase();
     const allowed = ['ar', 'en', 'tr'] as const;
-    const language = allowed.includes(langRaw as any) ? langRaw : '';
+    const language = allowed.includes(langRaw as (typeof allowed)[number]) ? langRaw : '';
     const duration = Number(input?.duration_minutes ?? 0);
     const isActive = input?.is_active ?? true;
     if (!title) return { ok: false, error: 'العنوان مطلوب' };
@@ -46,15 +51,31 @@ export async function createExam(
       return { ok: false, error: 'المدة يجب أن تكون عددًا صحيحًا موجبًا' };
 
     const supabase = createAdminClient();
+    const { data: groupRow, error: groupErr } = await supabase
+      .from('exam_groups')
+      .select('id,language,is_active')
+      .eq('id', input.group_id)
+      .maybeSingle();
+    if (groupErr) {
+      return { ok: false, error: groupErr.message, details: groupErr };
+    }
+    if (!groupRow) {
+      return { ok: false, error: 'المجموعة غير موجودة' };
+    }
+    const groupLang = (groupRow as { language: string }).language;
+    if (groupLang !== language) {
+      return { ok: false, error: 'لغة الامتحان يجب أن تطابق لغة المجموعة' };
+    }
     const { data, error } = await supabase
       .from('exams')
       .insert({
+        group_id: input.group_id,
         title,
         language,
         duration_minutes: duration,
         is_active: isActive,
       })
-      .select('id,title,language,duration_minutes,is_active,created_at')
+      .select('id,group_id,title,language,duration_minutes,is_active,created_at')
       .single();
     if (error) {
       return { ok: false, error: error.message, details: error };
@@ -62,6 +83,7 @@ export async function createExam(
     const r = data as unknown as Record<string, unknown>;
     const exam: ExamRecord = {
       id: r.id as number,
+      group_id: r.group_id as number,
       title: r.title as string,
       language: r.language as string,
       duration_minutes: r.duration_minutes as number,
@@ -96,7 +118,7 @@ export async function updateExam(
     if (input.language !== undefined) {
       const langRaw = String(input.language).trim().toLowerCase();
       const allowed = ['ar', 'en', 'tr'] as const;
-      if (!allowed.includes(langRaw as any)) {
+      if (!allowed.includes(langRaw as (typeof allowed)[number])) {
         return { ok: false, error: 'اللغة غير مدعومة', details: { language: input.language } };
       }
       payload.language = langRaw;
@@ -164,7 +186,7 @@ export async function listExams(
     const supabase = createAdminClient();
     let builder = supabase
       .from('exams')
-      .select('id,title,language,duration_minutes,is_active,created_at', { count: 'exact' });
+      .select('id,group_id,title,language,duration_minutes,is_active,created_at', { count: 'exact' });
     if (query.language) {
       const lang = String(query.language).trim().toLowerCase();
       const allowed = ['ar', 'en', 'tr'];
@@ -189,6 +211,7 @@ export async function listExams(
       const r = row as unknown as Record<string, unknown>;
       return {
         id: r.id as number,
+        group_id: r.group_id as number,
         title: r.title as string,
         language: r.language as string,
         duration_minutes: r.duration_minutes as number,
@@ -576,7 +599,7 @@ export async function getExamWithQuestions(
     const supabase = createAdminClient();
     const { data: examRow, error: examErr } = await supabase
       .from('exams')
-      .select('id,title,language,duration_minutes,is_active,created_at')
+      .select('id,group_id,title,language,duration_minutes,is_active,created_at')
       .eq('id', examId)
       .maybeSingle();
     if (examErr) {
@@ -588,6 +611,7 @@ export async function getExamWithQuestions(
     const e = examRow as unknown as Record<string, unknown>;
     const exam: ExamRecord = {
       id: e.id as number,
+      group_id: e.group_id as number,
       title: e.title as string,
       language: e.language as string,
       duration_minutes: e.duration_minutes as number,
@@ -607,6 +631,7 @@ export async function getExamWithQuestions(
 }
 
 type AutoCreateExamInput = {
+  group_id: number;
   title: string;
   language: string;
   duration_minutes: number;
@@ -631,6 +656,7 @@ export async function autoCreateExam(
 > {
   try {
     const created = await createExam({
+      group_id: input.group_id,
       title: input.title,
       language: input.language,
       duration_minutes: input.duration_minutes,
@@ -665,6 +691,90 @@ export async function autoCreateExam(
       if (res.ok) count += 1;
     }
     return { ok: true, exam: created.exam, createdQuestions: count };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export type ExamGroupRecord = {
+  id: number;
+  title: string;
+  language: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+type CreateExamGroupInput = {
+  title: string;
+  language: string;
+  is_active?: boolean;
+};
+
+export async function createExamGroup(
+  input: CreateExamGroupInput,
+): Promise<{ ok: true; group: ExamGroupRecord } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const title = String(input?.title ?? '').trim();
+    const langRaw = String(input?.language ?? '').trim().toLowerCase();
+    const allowed = ['ar', 'en', 'tr'] as const;
+    const language = allowed.includes(langRaw as (typeof allowed)[number]) ? langRaw : '';
+    const isActive = input?.is_active ?? true;
+    if (!title) return { ok: false, error: 'العنوان مطلوب' };
+    if (!language) return { ok: false, error: 'اللغة غير مدعومة' };
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('exam_groups')
+      .insert({ title, language, is_active: isActive })
+      .select('id,title,language,is_active,created_at')
+      .single();
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    const r = data as unknown as Record<string, unknown>;
+    const group: ExamGroupRecord = {
+      id: r.id as number,
+      title: r.title as string,
+      language: r.language as string,
+      is_active: (r.is_active as boolean | undefined) ?? true,
+      created_at: r.created_at as string,
+    };
+    return { ok: true, group };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function listExamGroups(): Promise<
+  { ok: true; groups: ExamGroupRecord[] } | { ok: false; error: string; details?: unknown }
+> {
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('exam_groups')
+      .select('id,title,language,is_active,created_at')
+      .order('created_at', { ascending: false });
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    const groups: ExamGroupRecord[] = (data ?? []).map((row) => {
+      const r = row as unknown as Record<string, unknown>;
+      return {
+        id: r.id as number,
+        title: r.title as string,
+        language: r.language as string,
+        is_active: (r.is_active as boolean | undefined) ?? true,
+        created_at: r.created_at as string,
+      };
+    });
+    return { ok: true, groups };
   } catch (error) {
     return {
       ok: false,
