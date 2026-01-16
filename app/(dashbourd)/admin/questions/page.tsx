@@ -22,7 +22,7 @@ import {
   Button, 
   Form 
 } from '@/components/ui';
-import { addExamQuestion, listExams, type ExamRecord } from '@/app/actions/exam';
+import { addExamQuestion, listExams, listExamGroups, type ExamRecord } from '@/app/actions/exam';
 import { 
   DeleteSweepRounded, 
   AddCircleOutlineRounded, 
@@ -52,6 +52,7 @@ export default function AdminQuestionsManualPage() {
   const [createdInfo, setCreatedInfo] = React.useState<{ examId: number; count: number } | null>(null);
   const [exams, setExams] = React.useState<ExamRecord[]>([]);
   const [loadingExams, setLoadingExams] = React.useState(false);
+  const [groups, setGroups] = React.useState<Map<number, string>>(new Map());
 
   // تحميل الامتحانات مع إدارة الأخطاء بشكل آمن
   const loadExams = React.useCallback(async () => {
@@ -64,6 +65,12 @@ export default function AdminQuestionsManualPage() {
         return;
       }
       setExams(res.exams);
+      const gs = await listExamGroups();
+      if (gs.ok) {
+        const m = new Map<number, string>();
+        for (const g of gs.groups) m.set(g.id, g.title);
+        setGroups(m);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
       setExams([]);
@@ -194,7 +201,7 @@ export default function AdminQuestionsManualPage() {
               <MenuItem value="">{loadingExams ? 'جاري تحميل القائمة...' : 'اختر الامتحان من القائمة'}</MenuItem>
               {exams.map((ex) => (
                 <MenuItem key={ex.id} value={ex.id}>
-                  {ex.title} | {ex.language.toUpperCase()}
+                  {ex.title} | {groups.get(ex.group_id) ?? `#${ex.group_id}`}
                 </MenuItem>
               ))}
             </Input>
