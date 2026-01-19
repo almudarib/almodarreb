@@ -783,3 +783,77 @@ export async function listExamGroups(): Promise<
     };
   }
 }
+
+type UpdateExamGroupInput = {
+  id: number;
+  title?: string;
+  language?: string;
+  is_active?: boolean;
+};
+
+export async function updateExamGroup(
+  input: UpdateExamGroupInput,
+): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const payload: Record<string, unknown> = {};
+    if (input.title !== undefined) payload.title = String(input.title).trim();
+    if (input.language !== undefined) {
+      const langRaw = String(input.language).trim().toLowerCase();
+      const allowed = ['ar', 'en', 'tr'] as const;
+      if (!allowed.includes(langRaw as (typeof allowed)[number])) {
+        return { ok: false, error: 'اللغة غير مدعومة', details: { language: input.language } };
+      }
+      payload.language = langRaw;
+    }
+    if (input.is_active !== undefined) payload.is_active = !!input.is_active;
+    if (Object.keys(payload).length === 0) return { ok: true };
+    const { error } = await supabase.from('exam_groups').update(payload).eq('id', input.id);
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function deleteExamGroup(
+  id: number,
+): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supabase = createAdminClient();
+    const { data: examRows, error: examsErr } = await supabase
+      .from('exams')
+      .select('id')
+      .eq('group_id', id);
+    if (examsErr) {
+      return { ok: false, error: examsErr.message, details: examsErr };
+    }
+    const examIds = (examRows ?? []).map((r) => (r as unknown as { id: number }).id);
+    if (examIds.length > 0) {
+      const { error: delResErr } = await supabase
+        .from('exam_results')
+        .delete()
+        .in('exam_id', examIds);
+      if (delResErr) {
+        return { ok: false, error: delResErr.message, details: delResErr };
+      }
+    }
+    const { error } = await supabase.from('exam_groups').delete().eq('id', id);
+    if (error) {
+      return { ok: false, error: error.message, details: error };
+    }
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}

@@ -20,6 +20,7 @@ import {
   MenuOpenRounded, // أيقونة إغلاق
   MenuRounded      // أيقونة فتح
 } from '@mui/icons-material';
+import { LanguageRounded } from '@mui/icons-material';
 import { LogoutButton } from '@/components/logout-button';
 
 const PALETTE = {
@@ -39,8 +40,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin', label: 'لوحة التحكم', icon: <DashboardRounded /> },
     { href: '/admin/users', label: 'المستخدمون', icon: <PeopleAltRounded /> },
     { href: '/admin/students', label: 'الطلاب', icon: <SchoolRounded /> },
+    { href: '/admin/groups', label: 'المجموعات', icon: <LanguageRounded /> },
     { href: '/admin/exam', label: 'الامتحانات', icon: <QuizRounded /> },
-    { href: '/admin/questions', label: 'الأسئلة', icon: <QuestionAnswerRounded /> },
+    { href: '/admin/manage_questions', label: 'إدارة الأسئلة', icon: <QuestionAnswerRounded /> },
+    { href: '/admin/questions', label: 'إضافة الأسئلة', icon: <QuestionAnswerRounded /> },
     { href: '/admin/video', label: 'الفيديو', icon: <VideoLibraryRounded /> },
     { href: '/admin/accounting', label: 'الحسابات', icon: <AccountBalanceWalletRounded /> },
   ];

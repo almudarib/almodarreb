@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -187,9 +186,6 @@ export default function AdminQuestionsManualPage() {
             قم بإضافة الأسئلة يدوياً وتحديد الإجابات الصحيحة بكل سهولة
           </Typography>
         </Box>
-        <Button component={Link} href="/admin/questions/manage" variant="outlined" sx={{ whiteSpace: 'nowrap' }}>
-          إدارة الأسئلة
-        </Button>
       </Stack>
 
       <Form onSubmit={handleSubmit}>
