@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
   Alert,
   Box,
@@ -177,15 +178,19 @@ export default function AdminQuestionsManualPage() {
 
   return (
     <Container maxWidth="md" sx={{ py: 5 }} dir="rtl">
-      {/* Header */}
-      <Box sx={{ mb: 4, textAlign: 'center', pb: 2, borderBottom: '1px solid', borderColor: 'var(--neutral-200)' }}>
-        <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--brand-dark)', mb: 1, letterSpacing: 0.2 }}>
-          بناء محتوى الامتحان
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'var(--neutral-700)' }}>
-          قم بإضافة الأسئلة يدوياً وتحديد الإجابات الصحيحة بكل سهولة
-        </Typography>
-      </Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4, pb: 2, borderBottom: '1px solid', borderColor: 'var(--neutral-200)' }}>
+        <Box sx={{ textAlign: 'center', flex: 1 }}>
+          <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--brand-dark)', mb: 1, letterSpacing: 0.2 }}>
+            بناء محتوى الامتحان
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'var(--neutral-700)' }}>
+            قم بإضافة الأسئلة يدوياً وتحديد الإجابات الصحيحة بكل سهولة
+          </Typography>
+        </Box>
+        <Button component={Link} href="/admin/questions/manage" variant="outlined" sx={{ whiteSpace: 'nowrap' }}>
+          إدارة الأسئلة
+        </Button>
+      </Stack>
 
       <Form onSubmit={handleSubmit}>
         {/* اختيار الامتحان */}
