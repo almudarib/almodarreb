@@ -79,7 +79,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }}>
           {!isCollapsed && (
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar sx={{ bgcolor: 'white', color: PALETTE.primary, width: 35, height: 35, fontWeight: 'bold', fontSize: '1rem' }}>A</Avatar>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, whiteSpace: 'nowrap', fontSize: '1.1rem' }}>
                 لوحة <span style={{ color: PALETTE.gold }}>الإدارة</span>
               </Typography>

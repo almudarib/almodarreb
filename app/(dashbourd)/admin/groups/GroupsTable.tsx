@@ -35,7 +35,7 @@ export default function GroupsTable() {
 
       <Table
         columns={[
-          { id: 'id', label: '#', width: 80 },
+          { id: 'id', label: '#' },
           { id: 'title', label: 'العنوان' },
           {
             id: 'language',

@@ -47,7 +47,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         <Box sx={{ p: 2, height: 80, display: 'flex', alignItems: 'center', justifyContent: isCollapsed ? 'center' : 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           {!isCollapsed && (
             <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar sx={{ bgcolor: 'white', color: PALETTE.primary, width: 35, height: 35, fontWeight: 'bold', fontSize: '1rem' }}>T</Avatar>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, whiteSpace: 'nowrap', fontSize: '1.1rem' }}>
                 لوحة <span style={{ color: PALETTE.gold }}>الأستاذ</span>
               </Typography>

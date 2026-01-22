@@ -1,75 +1,33 @@
 'use client';
 
 import * as React from 'react';
-import { Box, Container, Stack, Typography, Snackbar, Alert, LinearProgress, Paper, Divider } from '@mui/material';
+import { Box, Container, Stack, Typography, Snackbar, Alert, Skeleton, Paper, Divider } from '@mui/material';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
-import { listUsersByKind } from '@/app/actions/users';
-import { countStudents } from '@/app/actions/students';
-import { countExams, countQuestions } from '@/app/actions/exam';
-import { countSessions } from '@/app/actions/video';
-import { listTeacherAccountingStats, type TeacherAccountingStats } from '@/app/actions/accounting';
-import { ResponsivePie } from '@nivo/pie';
-import { ResponsiveBar } from '@nivo/bar';
+import { getAdminDashboardStats, type AdminDashboardData } from '@/app/actions/dashboard';
+import dynamic from 'next/dynamic';
+
+const Pie: any = dynamic(() => import('@nivo/pie').then((m) => m.ResponsivePie), { ssr: false });
+const Bar: any = dynamic(() => import('@nivo/bar').then((m) => m.ResponsiveBar), { ssr: false });
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const [stats, setStats] = React.useState({ teachers: 0, admins: 0, students: 0, exams: 0, videos: 0 });
-  const [content, setContent] = React.useState({ exams: 0, videos: 0, questions: 0 });
-  const [accStats, setAccStats] = React.useState<TeacherAccountingStats[]>([]);
+  const [dashboard, setDashboard] = React.useState<AdminDashboardData | null>(null);
   const [fromDate, setFromDate] = React.useState<string>('');
   const [toDate, setToDate] = React.useState<string>('');
 
-  const cssVar = (name: string, fallback?: string) => {
-    if (typeof window === 'undefined') return fallback ?? '';
-    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    return value || (fallback ?? '');
-  };
-
-  const brandPalette = [
-    cssVar('--brand-teal', '#0D2F57'),
-    cssVar('--brand-gold', '#F5C542'),
-    cssVar('--brand-dark', '#1F4E79'),
-    cssVar('--brand-teal-hover', '#1F4E79'),
-  ];
+  const brandPalette = React.useMemo(() => ['#0D2F57', '#F5C542', '#1F4E79'], []);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [teachersRes, adminsRes, studentsCountRes, examsCountRes, videosCountRes, questionsCountRes, accRes] = await Promise.all([
-        listUsersByKind('teacher'),
-        listUsersByKind('admin'),
-        countStudents({ registration_from: fromDate || undefined, registration_to: toDate || undefined }),
-        countExams({ created_from: fromDate || undefined, created_to: toDate || undefined }),
-        countSessions({ kind: 'video', created_from: fromDate || undefined, created_to: toDate || undefined }),
-        countQuestions(),
-        listTeacherAccountingStats({ from: fromDate || undefined, to: toDate || undefined }),
-      ]);
-
-      if (!teachersRes.ok || !adminsRes.ok || !studentsCountRes.ok || !examsCountRes.ok || !videosCountRes.ok || !questionsCountRes.ok || !accRes.ok) {
-        throw new Error('فشل تحميل بعض البيانات');
-      }
-
-      setStats({
-        teachers: (teachersRes.users ?? []).length,
-        admins: (adminsRes.users ?? []).length,
-        students: studentsCountRes.total ?? 0,
-        exams: examsCountRes.total ?? 0,
-        videos: videosCountRes.total ?? 0,
-      });
-
-      setContent({
-        exams: examsCountRes.total ?? 0,
-        videos: videosCountRes.total ?? 0,
-        questions: questionsCountRes.total ?? 0,
-      });
-
-      setAccStats(accRes.stats ?? []);
+      const res = await getAdminDashboardStats({ from: fromDate || undefined, to: toDate || undefined });
+      setDashboard(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'فشل تحميل الإحصائيات');
     } finally {
@@ -77,9 +35,22 @@ export default function AdminDashboardPage() {
     }
   }, [fromDate, toDate]);
 
+  const loadInitial = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getAdminDashboardStats({ from: undefined, to: undefined });
+      setDashboard(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'فشل تحميل الإحصائيات');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   React.useEffect(() => {
-    load();
-  }, [load]);
+    loadInitial();
+  }, [loadInitial]);
 
   return (
     <Container maxWidth="lg" sx={{ py: 5, minHeight: '100vh', bgcolor: '#f8fafc' }} dir="rtl">
@@ -104,8 +75,6 @@ export default function AdminDashboardPage() {
           </Stack>
         </Paper>
 
-        {loading && <LinearProgress />}
-
         {/* Stats Cards */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
    <Card 
@@ -124,73 +93,70 @@ export default function AdminDashboardPage() {
   />
   <CardContent>
     <Box height={350} width="100%" position="relative">
-      <ResponsivePie
-        data={[
-          { id: 'طلاب', label: 'الطلاب', value: stats.students },
-          { id: 'مدرسين', label: 'المدرسين', value: stats.teachers },
-          { id: 'إدارة', label: 'الإدارة', value: stats.admins },
-        ]}
-        margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
-        innerRadius={0.7} // جعل الفتحة الداخلية أكبر لتبدو كحلقة عصرية (Donut Chart)
-        padAngle={2} // إضافة مسافة بسيطة بين الأقسام
-        cornerRadius={5} // جعل حواف الأقسام دائرية قليلاً
-        activeOuterRadiusOffset={10} // تكبير القسم عند الوقوف عليه بالماوس
-        colors={brandPalette}
-        borderWidth={1}
-        borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
-        
-        // تحسين ملصقات البيانات (التي تظهر فوق الرسم)
-        enableArcLinkLabels={true}
-        arcLinkLabelsSkipAngle={10}
-        arcLinkLabelsTextColor="#333333"
-        arcLinkLabelsThickness={2}
-        arcLinkLabelsColor={{ from: 'color' }}
-        
-        // تحسين الأرقام داخل الرسم
-        arcLabel="value"
-        arcLabelsRadiusOffset={0.5}
-        arcLabelsTextColor="#ffffff"
-
-        // إضافة وسيلة إيضاح (Legend) في الأسفل
-        legends={[
-          {
-            anchor: 'bottom',
-            direction: 'row',
-            justify: false,
-            translateX: 0,
-            translateY: 70,
-            itemsSpacing: 10,
-            itemWidth: 80,
-            itemHeight: 18,
-            itemTextColor: '#666',
-            itemDirection: 'right-to-left', // لدعم اللغة العربية
-            itemOpacity: 1,
-            symbolSize: 15,
-            symbolShape: 'circle',
-          }
-        ]}
-        // إضافة تأثيرات حركة سلسة
-        motionConfig="gentle"
-      />
-      
-      {/* إضافة إجمالي المستخدمين في منتصف الدائرة */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '43%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          textAlign: 'center',
-          pointerEvents: 'none'
-        }}
-      >
-        <Typography variant="h4" fontWeight="bold" color="primary">
-          {stats.students + stats.teachers + stats.admins}
-        </Typography>
-        <Typography variant="caption" color="textSecondary">
-          إجمالي المستخدمين
-        </Typography>
-      </Box>
+      {loading || !dashboard ? (
+        <Skeleton variant="rectangular" height={350} />
+      ) : (
+        <>
+          <Pie
+            data={[
+              { id: 'طلاب', label: 'الطلاب', value: dashboard.stats.students },
+              { id: 'مدرسين', label: 'المدرسين', value: dashboard.stats.teachers },
+              { id: 'إدارة', label: 'الإدارة', value: dashboard.stats.admins },
+            ]}
+            margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+            innerRadius={0.7}
+            padAngle={2}
+            cornerRadius={5}
+            activeOuterRadiusOffset={10}
+            colors={brandPalette}
+            borderWidth={1}
+            borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
+            enableArcLinkLabels={true}
+            arcLinkLabelsSkipAngle={10}
+            arcLinkLabelsTextColor="#333333"
+            arcLinkLabelsThickness={2}
+            arcLinkLabelsColor={{ from: 'color' }}
+            arcLabel="value"
+            arcLabelsRadiusOffset={0.5}
+            arcLabelsTextColor="#ffffff"
+            legends={[
+              {
+                anchor: 'bottom',
+                direction: 'row',
+                justify: false,
+                translateX: 0,
+                translateY: 70,
+                itemsSpacing: 10,
+                itemWidth: 80,
+                itemHeight: 18,
+                itemTextColor: '#666',
+                itemDirection: 'right-to-left',
+                itemOpacity: 1,
+                symbolSize: 15,
+                symbolShape: 'circle',
+              },
+            ]}
+            motionConfig="gentle"
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '43%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <Typography variant="h4" fontWeight="bold" color="primary">
+              {dashboard.stats.students + dashboard.stats.teachers + dashboard.stats.admins}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              إجمالي المستخدمين
+            </Typography>
+          </Box>
+        </>
+      )}
     </Box>
   </CardContent>
 </Card>
@@ -199,22 +165,26 @@ export default function AdminDashboardPage() {
             <CardHeader title="محتوى المنصة" />
             <CardContent>
               <Box height={320}>
-                <ResponsiveBar
-                  data={[
-                    { category: 'امتحانات', value: content.exams },
-                    { category: 'فيديوهات', value: content.videos },
-                    { category: 'أسئلة', value: content.questions },
-                  ]}
-                  keys={['value']}
-                  indexBy="category"
-                  colors={brandPalette}
-                  enableLabel={true}
-                  labelSkipWidth={12}
-                  labelSkipHeight={12}
-                  labelTextColor="#ffffff"
-                  margin={{ top: 20, right: 20, bottom: 50, left: 40 }}
-                  padding={0.4}
-                />
+                {loading || !dashboard ? (
+                  <Skeleton variant="rectangular" height={320} />
+                ) : (
+                  <Bar
+                    data={[
+                      { category: 'امتحانات', value: dashboard.content.exams },
+                      { category: 'فيديوهات', value: dashboard.content.videos },
+                      { category: 'أسئلة', value: dashboard.content.questions },
+                    ]}
+                    keys={['value']}
+                    indexBy="category"
+                    colors={brandPalette}
+                    enableLabel={true}
+                    labelSkipWidth={12}
+                    labelSkipHeight={12}
+                    labelTextColor="#ffffff"
+                    margin={{ top: 20, right: 20, bottom: 50, left: 40 }}
+                    padding={0.4}
+                  />
+                )}
               </Box>
             </CardContent>
           </Card>
@@ -226,18 +196,25 @@ export default function AdminDashboardPage() {
           <Divider />
           <CardContent>
             <Box height={400}>
-              <ResponsiveBar
-                data={accStats.map((s) => ({ name: s.teacher_name || `#${s.teacher_id}`, amount: s.total_due }))}
-                keys={['amount']}
-                indexBy="name"
-                colors={cssVar('--brand-teal', '#0D2F57')}
-                enableLabel={true}
-                labelSkipWidth={12}
-                labelSkipHeight={12}
-                labelTextColor="#ffffff"
-                margin={{ top: 20, right: 20, bottom: 80, left: 60 }}
-                padding={0.3}
-              />
+              {loading || !dashboard ? (
+                <Skeleton variant="rectangular" height={400} />
+              ) : (
+                <Bar
+                  data={dashboard.accStats.map((s) => ({
+                    name: s.teacher_name || `#${s.teacher_id}`,
+                    amount: s.total_due,
+                  }))}
+                  keys={['amount']}
+                  indexBy="name"
+                  colors={[brandPalette[0]]}
+                  enableLabel={true}
+                  labelSkipWidth={12}
+                  labelSkipHeight={12}
+                  labelTextColor="#ffffff"
+                  margin={{ top: 20, right: 20, bottom: 80, left: 60 }}
+                  padding={0.3}
+                />
+              )}
             </Box>
             <Stack alignItems="end" mt={3}>
               <Button onClick={() => router.push('/admin/accounting')} className="bg-black text-white">
