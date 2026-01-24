@@ -92,12 +92,6 @@ export function LoginForm({
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-[var(--brand-dark)] font-bold">كلمة المرور</Label>
-                  <Link
-                    href="/auth/forgot-password"
-                    className="text-sm font-medium text-[var(--brand-teal)] hover:text-[var(--brand-teal-hover)] hover:underline underline-offset-4"
-                  >
-                    نسيت كلمة المرور؟
-                  </Link>
                 </div>
                 <div className="relative">
                   <LockKeyhole className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -155,10 +149,6 @@ export function LoginForm({
         </CardContent>
       </Card>
       
-      <p className="px-8 text-center text-sm text-neutral-500">
-        بالضغط على تسجيل الدخول، أنت توافق على{" "}
-        <Link href="/terms" className="underline underline-offset-4 hover:text-[var(--brand-teal)]">شروط الخدمة</Link>
-      </p>
     </div>
   );
 }
