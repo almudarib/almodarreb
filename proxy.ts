@@ -30,11 +30,8 @@ async function getRole(
       },
     },
   );
-  const { data } = await supabase.auth.getClaims();
-  const hasUser = !!data?.claims;
-  if (!hasUser) return "anonymous";
-  const { data: u } = await supabase.auth.getUser();
-  const uid = u.user?.id ?? null;
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id ?? null;
   if (!uid) return "anonymous";
   const { data: usr } = await supabase
     .from("users")
@@ -93,6 +90,10 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  if (pathname === "/") {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -110,16 +111,10 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims ? data.claims : null;
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user ?? null;
 
-  if (
-    pathname !== "/" &&
-    !user &&
-    !pathname.startsWith("/login") &&
-    !pathname.startsWith("/auth") &&
-    true
-  ) {
+  if (!user && !pathname.startsWith("/auth")) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     const red = NextResponse.redirect(url);
@@ -142,14 +137,8 @@ export async function proxy(request: NextRequest) {
   let outcome: "allowed" | "redirected" | "denied" = "allowed";
   let dest: string | null = null;
 
-  if (!user) {
-    if (!isPublicPath(pathname)) {
-      dest = "/auth/login";
-    }
-  } else {
-    if (pathname === "/") {
-      dest = roleHome;
-    } else if (pathname.startsWith("/auth/login")) {
+  if (user) {
+    if (pathname.startsWith("/auth/login")) {
       dest = roleHome;
     } else if (pathname.startsWith("/admin") && role !== "admin") {
       dest = roleHome;
