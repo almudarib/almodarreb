@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Alert, Box, FormControl, MenuItem, Select, Stack, Typography } from '@mui/material';
+import { CircularProgress } from '@mui/material';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form } from '@/components/ui/Form';
@@ -10,7 +11,15 @@ import { createUser, type CreateUserInput } from '@/app/actions/users';
 
 type UserKind = 'admin' | 'teacher';
 
-export default function AddUserForm({ onCreated, formId }: { onCreated: () => void; formId?: string }) {
+export default function AddUserForm({
+  onCreated,
+  formId,
+  onSubmittingChange,
+}: {
+  onCreated: () => void;
+  formId?: string;
+  onSubmittingChange?: (submitting: boolean) => void;
+}) {
   const [kind, setKind] = React.useState<UserKind | ''>('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -23,12 +32,14 @@ export default function AddUserForm({ onCreated, formId }: { onCreated: () => vo
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
+    onSubmittingChange?.(true);
     let input: CreateUserInput =
       kind === 'admin'
         ? { kind, email, password, name } as any
         : { kind: 'teacher', email, password, name, per_student_fee: Number(defaultFee) } as any;
     const res = await createUser(input);
     setSubmitting(false);
+    onSubmittingChange?.(false);
     if (!res.ok) {
       setError(res.error);
       return;
@@ -42,7 +53,7 @@ export default function AddUserForm({ onCreated, formId }: { onCreated: () => vo
   }
 
   return (
-    <Box sx={{ p: 1 }}>
+    <Box sx={{ p: 1, position: 'relative' }}>
       {error && <Alert severity="error" sx={{ mb: 2, borderRadius: '8px' }}>{error}</Alert>}
       <Form id={formId} onSubmit={handleSubmit}>
         <Stack spacing={4} sx={{ p: 1 }}>
@@ -125,6 +136,19 @@ export default function AddUserForm({ onCreated, formId }: { onCreated: () => vo
           `}} />
         </Stack>
       </Form>
+      {submitting && (
+        <Box sx={{
+          position: 'absolute',
+          inset: 0,
+          bgcolor: 'rgba(255,255,255,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '12px'
+        }}>
+          <CircularProgress size={28} />
+        </Box>
+      )}
     </Box>
   );
 }
