@@ -8,7 +8,7 @@ import type {
   UserKind,
 } from './types';
 
-export async function ensureRoleId(roleName: 'admin' | 'teacher'): Promise<number> {
+export async function ensureRoleId(roleName: 'admin' | 'sub_admin' | 'teacher'): Promise<number> {
   const supabase = createAdminClient();
   const { data: roleQuery, error: roleQueryError } = await supabase
     .from('roles')
@@ -40,13 +40,14 @@ export async function listUsersGroupedByRole(): Promise<ListUsersGroupedResult> 
     const { data: rolesRows, error: rolesError } = await supabase
       .from('roles')
       .select('id,name')
-      .in('name', ['admin', 'teacher']);
+      .in('name', ['admin', 'sub_admin', 'teacher']);
     if (rolesError) {
       return { ok: false, error: rolesError.message, details: rolesError };
     }
 
-    const roleIdsByName: Record<'admin' | 'teacher', number | undefined> = {
+    const roleIdsByName: Record<'admin' | 'sub_admin' | 'teacher', number | undefined> = {
       admin: rolesRows?.find((r) => r.name === 'admin')?.id as number | undefined,
+      sub_admin: rolesRows?.find((r) => r.name === 'sub_admin')?.id as number | undefined,
       teacher: rolesRows?.find((r) => r.name === 'teacher')?.id as number | undefined,
     };
 
@@ -55,7 +56,7 @@ export async function listUsersGroupedByRole(): Promise<ListUsersGroupedResult> 
     );
 
     if (existingRoleIds.length === 0) {
-      return { ok: true, admin: [], teacher: [] };
+      return { ok: true, admin: [], sub_admin: [], teacher: [] };
     }
 
     const { data: userRolesRows, error: userRolesError } = await supabase
@@ -71,7 +72,7 @@ export async function listUsersGroupedByRole(): Promise<ListUsersGroupedResult> 
     );
 
     if (allUserIds.length === 0) {
-      return { ok: true, admin: [], teacher: [] };
+      return { ok: true, admin: [], sub_admin: [], teacher: [] };
     }
 
     const { data: usersRows, error: usersError } = await supabase
@@ -94,6 +95,7 @@ export async function listUsersGroupedByRole(): Promise<ListUsersGroupedResult> 
     );
 
     const adminUsers: ListedUser[] = [];
+    const subAdminUsers: ListedUser[] = [];
     const teacherUsers: ListedUser[] = [];
 
     for (const ur of userRolesRows ?? []) {
@@ -103,13 +105,17 @@ export async function listUsersGroupedByRole(): Promise<ListUsersGroupedResult> 
         adminUsers.push(u);
         continue;
       }
+      if (ur.role_id === roleIdsByName.sub_admin) {
+        subAdminUsers.push(u);
+        continue;
+      }
       if (ur.role_id === roleIdsByName.teacher) {
         teacherUsers.push(u);
         continue;
       }
     }
 
-    return { ok: true, admin: adminUsers, teacher: teacherUsers };
+    return { ok: true, admin: adminUsers, sub_admin: subAdminUsers, teacher: teacherUsers };
   } catch (error) {
     return {
       ok: false,
@@ -130,7 +136,7 @@ export async function listUsersByKind(
     if (!grouped.ok) {
       return { ok: false, error: grouped.error, details: grouped.details };
     }
-    const src = kind === 'admin' ? grouped.admin : grouped.teacher;
+    const src = kind === 'admin' ? grouped.admin : kind === 'sub_admin' ? grouped.sub_admin : grouped.teacher;
     return {
       ok: true,
       users: src.map((u) => ({ id: u.id, name: u.name, kind })),

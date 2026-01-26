@@ -106,6 +106,7 @@ export default function EditUserModal({
           >
             <MenuItem value="teacher">معلّم</MenuItem>
             <MenuItem value="admin">ادمن</MenuItem>
+            <MenuItem value="sub_admin">أدمن فرعي</MenuItem>
           </Select>
         </Stack>
       </Box>

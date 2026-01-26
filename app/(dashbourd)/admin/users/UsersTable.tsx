@@ -13,6 +13,7 @@ import type { UserKind, UserSummary } from '@/app/actions/users';
 const ROLE_FILTERS = [
   { key: 'all', label: 'الكل' },
   { key: 'admin', label: 'المدراء' },
+  { key: 'sub_admin', label: 'الأدمن الفرعي' },
   { key: 'teacher', label: 'المعلمون' },
 ] as const;
 
@@ -32,9 +33,12 @@ export default function UsersTable() {
     const match = (u: UserSummary) => {
       if (!q) return true;
       const nameMatch = u.name.toLowerCase().includes(q);
-      const roleText = u.kind === 'admin'
-        ? 'admin مدير ادمن مسؤول'
-        : 'teacher معلم معلّم أستاذ استاذ';
+      const roleText =
+        u.kind === 'admin'
+          ? 'admin مدير ادمن مسؤول'
+          : u.kind === 'sub_admin'
+          ? 'sub_admin ادمن فرعي مسؤول فرعي'
+          : 'teacher معلم معلّم أستاذ استاذ';
       const roleMatch = roleText.includes(q);
       return nameMatch || roleMatch;
     };
@@ -121,8 +125,8 @@ export default function UsersTable() {
             id: 'kind',
             label: 'نوع الحساب',
             render: (u) => (
-              <Box sx={{ display: 'inline-flex', px: 1.5, py: 0.5, borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, bgcolor: u.kind === 'admin' ? 'var(--brand-dark)' : '#f0f0f0', color: u.kind === 'admin' ? 'white' : '#555', textTransform: 'uppercase' }}>
-                {u.kind === 'admin' ? 'ادمن' : 'معلّم'}
+              <Box sx={{ display: 'inline-flex', px: 1.5, py: 0.5, borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, bgcolor: (u.kind === 'admin' || u.kind === 'sub_admin') ? 'var(--brand-dark)' : '#f0f0f0', color: (u.kind === 'admin' || u.kind === 'sub_admin') ? 'white' : '#555', textTransform: 'uppercase' }}>
+                {u.kind === 'admin' ? 'ادمن' : u.kind === 'sub_admin' ? 'أدمن فرعي' : 'معلّم'}
               </Box>
             )
           },

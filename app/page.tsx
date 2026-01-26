@@ -29,6 +29,9 @@ export default async function Page() {
     if (roleNames.includes("admin")) {
       redirect("/admin");
     }
+    if (roleNames.includes("sub_admin")) {
+      redirect("/sub_admin");
+    }
     if (roleNames.includes("teacher")) {
       redirect("/teacher");
     }

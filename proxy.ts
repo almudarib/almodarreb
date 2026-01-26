@@ -13,7 +13,7 @@ function isPublicPath(pathname: string): boolean {
 async function getRole(
   request: NextRequest,
   response: NextResponse,
-): Promise<"admin" | "teacher" | "student" | "anonymous"> {
+): Promise<"admin" | "sub_admin" | "teacher" | "student" | "anonymous"> {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -48,6 +48,7 @@ async function getRole(
       .map((r) => (r as UserRoleRow)?.roles?.name as string | undefined)
       .filter(Boolean);
     if (names.includes("admin")) return "admin";
+    if (names.includes("sub_admin")) return "sub_admin";
     if (names.includes("teacher")) return "teacher";
   }
   const { data: stu } = await supabase
@@ -131,7 +132,7 @@ export async function proxy(request: NextRequest) {
 
   const role = await getRole(request, response);
   const effectiveRole =
-    (role === "anonymous" ? (rbac.defaultRole as "admin" | "teacher" | "student") : role);
+    (role === "anonymous" ? (rbac.defaultRole as "admin" | "sub_admin" | "teacher" | "student") : role);
   const roleHome = rbac.roles[effectiveRole].home;
 
   let outcome: "allowed" | "redirected" | "denied" = "allowed";
@@ -143,6 +144,8 @@ export async function proxy(request: NextRequest) {
     } else if (pathname.startsWith("/admin") && role !== "admin") {
       dest = roleHome;
     } else if (pathname.startsWith("/teacher") && role !== "teacher") {
+      dest = roleHome;
+    } else if (pathname.startsWith("/sub_admin") && role !== "sub_admin") {
       dest = roleHome;
     }
   }

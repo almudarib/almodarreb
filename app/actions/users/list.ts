@@ -13,13 +13,14 @@ export async function listAllUsersSummary(): Promise<
     const { data: rolesRows, error: rolesError } = await supabase
       .from('roles')
       .select('id,name')
-      .in('name', ['admin', 'teacher']);
+      .in('name', ['admin', 'sub_admin', 'teacher']);
     if (rolesError) {
       return { ok: false, error: rolesError.message, details: rolesError };
     }
 
-    const roleIdsByName: Record<'admin' | 'teacher', number | undefined> = {
+    const roleIdsByName: Record<'admin' | 'sub_admin' | 'teacher', number | undefined> = {
       admin: rolesRows?.find((r) => r.name === 'admin')?.id as number | undefined,
+      sub_admin: rolesRows?.find((r) => r.name === 'sub_admin')?.id as number | undefined,
       teacher: rolesRows?.find((r) => r.name === 'teacher')?.id as number | undefined,
     };
     const existingRoleIds = Object.values(roleIdsByName).filter(
@@ -29,7 +30,7 @@ export async function listAllUsersSummary(): Promise<
     const usersWithRoles: Array<{
       id: number;
       name: string;
-      kind: 'admin' | 'teacher';
+      kind: 'admin' | 'sub_admin' | 'teacher';
       auth_user_id: string;
     }> = [];
 
@@ -65,8 +66,12 @@ export async function listAllUsersSummary(): Promise<
         for (const ur of userRolesRows ?? []) {
           const info = userById.get(ur.user_id as number);
           if (!info) continue;
-          const kind: 'admin' | 'teacher' =
-            ur.role_id === roleIdsByName.admin ? 'admin' : 'teacher';
+          const kind: 'admin' | 'sub_admin' | 'teacher' =
+            ur.role_id === roleIdsByName.admin
+              ? 'admin'
+              : ur.role_id === roleIdsByName.sub_admin
+              ? 'sub_admin'
+              : 'teacher';
           usersWithRoles.push({
             id: ur.user_id as number,
             name: info.name,

@@ -5,6 +5,10 @@
       "home": "/admin",
       "allowed": ["/admin"]
     },
+    "sub_admin": {
+      "home": "/sub_admin",
+      "allowed": ["/sub_admin"]
+    },
     "teacher": {
       "home": "/teacher",
       "allowed": ["/teacher"]

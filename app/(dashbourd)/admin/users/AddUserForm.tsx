@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Form } from '@/components/ui/Form';
 import { PeopleAltRounded } from '@mui/icons-material';
 import { createUser, type CreateUserInput } from '@/app/actions/users';
+import type { UserKind } from '@/app/actions/users';
 
-type UserKind = 'admin' | 'teacher';
+ 
 
 export default function AddUserForm({
   onCreated,
@@ -34,9 +35,9 @@ export default function AddUserForm({
     setSubmitting(true);
     onSubmittingChange?.(true);
     let input: CreateUserInput =
-      kind === 'admin'
-        ? { kind, email, password, name } as any
-        : { kind: 'teacher', email, password, name, per_student_fee: Number(defaultFee) } as any;
+      kind === 'teacher'
+        ? { kind: 'teacher', email, password, name, per_student_fee: Number(defaultFee) } as any
+        : { kind, email, password, name } as any;
     const res = await createUser(input);
     setSubmitting(false);
     onSubmittingChange?.(false);
@@ -75,6 +76,7 @@ export default function AddUserForm({
               >
                 <MenuItem value="teacher">معلّم </MenuItem>
                 <MenuItem value="admin">مسؤول </MenuItem>
+                <MenuItem value="sub_admin">أدمن فرعي </MenuItem>
               </Select>
             </FormControl>
             <Box>

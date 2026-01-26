@@ -36,7 +36,7 @@ export async function createUser(input: CreateUserInput): Promise<CreateUserResu
       return { ok: false, error: userError.message, details: userError };
     }
 
-    const roleName = input.kind === 'admin' ? 'admin' : 'teacher';
+    const roleName = input.kind;
     const roleId = await ensureRoleId(roleName);
 
     const { error: userRoleError } = await supabase

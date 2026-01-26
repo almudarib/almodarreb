@@ -1,6 +1,6 @@
 'use server';
 
-export type UserKind = 'admin' | 'teacher';
+export type UserKind = 'admin' | 'sub_admin' | 'teacher';
 
 export type BaseInput = {
   email: string;
@@ -18,7 +18,11 @@ export type AdminInput = BaseInput & {
   kind: 'admin';
 };
 
-export type CreateUserInput = TeacherInput | AdminInput;
+export type SubAdminInput = BaseInput & {
+  kind: 'sub_admin';
+};
+
+export type CreateUserInput = TeacherInput | AdminInput | SubAdminInput;
 
 export type CreateUserResult =
   | {
@@ -50,6 +54,7 @@ export type ListUsersGroupedResult =
   | {
       ok: true;
       admin: ListedUser[];
+      sub_admin: ListedUser[];
       teacher: ListedUser[];
     }
   | {
@@ -67,14 +72,14 @@ export type UserSummary = {
 };
 
 export type UserDetails = {
-  kind: 'admin' | 'teacher';
+  kind: 'admin' | 'sub_admin' | 'teacher';
   id: number;
   name: string;
   auth_user_id: string;
 };
 
 export type UpdateUserInput = {
-  kind: 'admin' | 'teacher';
+  kind: 'admin' | 'sub_admin' | 'teacher';
   id: number;
   name?: string;
   email?: string;
