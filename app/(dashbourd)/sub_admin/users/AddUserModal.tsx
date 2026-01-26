@@ -1,0 +1,52 @@
+'use client';
+
+import * as React from 'react';
+import { Modal } from '@/components/ui/Modal';
+import SubAdminAddUserForm from './AddUserForm';
+import { CircularProgress } from '@mui/material';
+
+export default function SubAdminAddUserModal({
+  open,
+  onClose,
+  onAdded,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [submitting, setSubmitting] = React.useState(false);
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      onCancel={onClose}
+      title="إضافة معلّم جديد"
+      submitText={
+        submitting ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <CircularProgress size={16} />
+            جارٍ الإضافة...
+          </span>
+        ) : (
+          'إضافة'
+        )
+      }
+      submitDisabled={submitting}
+      onSubmit={() => {
+        const form = document.getElementById('sub-admin-add-user-form') as HTMLFormElement | null;
+        if (form) form.requestSubmit();
+      }}
+      fullWidth
+      maxWidth="sm"
+    >
+      <SubAdminAddUserForm
+        formId="sub-admin-add-user-form"
+        onSubmittingChange={setSubmitting}
+        onCreated={() => {
+          onAdded();
+          onClose();
+        }}
+      />
+    </Modal>
+  );
+}
