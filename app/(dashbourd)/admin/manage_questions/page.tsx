@@ -266,9 +266,9 @@ export default function ManageQuestionsPage() {
 
   React.useEffect(() => { load(); }, [load]);
 
-  async function ensureExamQuestionsLoaded(examId: number) {
+  async function ensureExamQuestionsLoaded(examId: number, force: boolean = false) {
     const current = questionsByExam.get(examId);
-    if (current && current.length > 0) return;
+    if (!force && current && current.length > 0) return;
     setLoadingQuestions((m) => new Map(m).set(examId, true));
     try {
       const res = await listExamQuestions(examId);
@@ -437,7 +437,7 @@ export default function ManageQuestionsPage() {
         onSaved={async () => {
           setEditOpen(false);
           if (selectedQuestion) {
-            await ensureExamQuestionsLoaded(selectedQuestion.exam_id);
+            await ensureExamQuestionsLoaded(selectedQuestion.exam_id, true);
           }
         }}
       />
@@ -454,7 +454,7 @@ export default function ManageQuestionsPage() {
           if (res.ok) {
             setDeleteOpen(false);
             setDeleteError(null);
-            await ensureExamQuestionsLoaded(selectedQuestion.exam_id);
+            await ensureExamQuestionsLoaded(selectedQuestion.exam_id, true);
           } else {
             setDeleteError(res.error);
           }
