@@ -9,29 +9,16 @@ type UserRoleRow = { roles?: { name?: string } };
 function isPublicPath(pathname: string): boolean {
   return rbac.publicPaths.some((p: string) => pathname.startsWith(p));
 }
+function readCachedRole(request: NextRequest): "admin" | "sub_admin" | "teacher" | "student" | null {
+  const raw = request.cookies.get("app_role")?.value ?? "";
+  if (raw === "admin" || raw === "sub_admin" || raw === "teacher" || raw === "student") return raw;
+  return null;
+}
 
 async function getRole(
-  request: NextRequest,
-  response: NextResponse,
+  supabase: any,
+  uid: string | null,
 ): Promise<"admin" | "sub_admin" | "teacher" | "student" | "anonymous"> {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
-          );
-        },
-      },
-    },
-  );
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData.user?.id ?? null;
   if (!uid) return "anonymous";
   const { data: usr } = await supabase
     .from("users")
@@ -44,9 +31,10 @@ async function getRole(
       .from("user_roles")
       .select("role_id, roles(name)")
       .eq("user_id", userId);
-    const names = (urs ?? [])
-      .map((r) => (r as UserRoleRow)?.roles?.name as string | undefined)
-      .filter(Boolean);
+    const rows = ((urs ?? []) as UserRoleRow[]);
+    const names = rows
+      .map((r: UserRoleRow) => r.roles?.name as string | undefined)
+      .filter(Boolean) as string[];
     if (names.includes("admin")) return "admin";
     if (names.includes("sub_admin")) return "sub_admin";
     if (names.includes("teacher")) return "teacher";
@@ -69,6 +57,9 @@ async function logAccess(
     outcome: "allowed" | "redirected" | "denied";
   },
 ): Promise<void> {
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
   try {
     const admin = createAdminClient();
     await admin.from("access_logs").insert({
@@ -130,10 +121,16 @@ export async function proxy(request: NextRequest) {
     return red;
   }
 
-  const role = await getRole(request, response);
+  const cachedRole = readCachedRole(request);
+  const role =
+    cachedRole ?? (await getRole(supabase, user?.id ?? null));
   const effectiveRole =
     (role === "anonymous" ? (rbac.defaultRole as "admin" | "sub_admin" | "teacher" | "student") : role);
   const roleHome = rbac.roles[effectiveRole].home;
+
+  if (role !== "anonymous") {
+    response.cookies.set("app_role", role, { path: "/", maxAge: 60 * 5 });
+  }
 
   let outcome: "allowed" | "redirected" | "denied" = "allowed";
   let dest: string | null = null;
@@ -156,9 +153,8 @@ export async function proxy(request: NextRequest) {
     url.pathname = dest;
     const red = NextResponse.redirect(url);
     response.cookies.getAll().forEach((c) => red.cookies.set(c));
-    const { data: u } = await supabase.auth.getUser();
     await logAccess({
-      authUserId: u.user?.id ?? null,
+      authUserId: user?.id ?? null,
       role,
       path: pathname,
       method: request.method,
@@ -168,9 +164,8 @@ export async function proxy(request: NextRequest) {
   }
 
   Promise.resolve().then(async () => {
-    const { data: u } = await supabase.auth.getUser();
     await logAccess({
-      authUserId: u.user?.id ?? null,
+      authUserId: user?.id ?? null,
       role,
       path: pathname,
       method: request.method,
@@ -191,6 +186,6 @@ export const config = {
      * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
      * Feel free to modify this pattern to include more paths.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|@vite|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
