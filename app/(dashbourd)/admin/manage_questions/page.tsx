@@ -14,6 +14,7 @@ import {
   AccordionSummary,
   AccordionDetails,
   IconButton,
+  Snackbar,
 } from '@mui/material';
 import { ExpandMore, EditOutlined, DeleteOutline, ImageOutlined } from '@mui/icons-material';
 import {
@@ -59,7 +60,7 @@ function EditQuestionModal({
   open: boolean;
   onClose: () => void;
   question: EditableQuestion | null;
-  onSaved: () => void;
+  onSaved: (notice?: { warnings?: string[]; message?: string }) => void;
 }) {
   const [text, setText] = React.useState('');
   const [a, setA] = React.useState('');
@@ -73,6 +74,7 @@ function EditQuestionModal({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = React.useState(0);
+  const [warning, setWarning] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!question || !open) return;
@@ -84,6 +86,7 @@ function EditQuestionModal({
     setCorrect(question.correct_option);
     setImageChoice({ mode: 'keep' });
     setError(null);
+    setWarning(null);
     setFileInputKey((k) => k + 1);
   }, [question, open]);
 
@@ -110,7 +113,9 @@ function EditQuestionModal({
     if (!question) return;
     setSaving(true);
     setError(null);
+    setWarning(null);
     try {
+      console.log('edit-question:start', { id: question.id, oldImageUrl: question.image_url });
       const payload: Record<string, unknown> = {
         id: question.id,
         question: String(text).trim(),
@@ -133,12 +138,22 @@ function EditQuestionModal({
       }
       const res = await updateExamQuestion(payload as any);
       if (res.ok) {
-        onSaved();
+        if ((res as any).warnings && Array.isArray((res as any).warnings) && (res as any).warnings.length > 0) {
+          const msg = (res as any).warnings.join('، ');
+          setWarning(msg);
+          console.log('edit-question:warning', { id: question.id, warnings: (res as any).warnings });
+          onSaved({ warnings: (res as any).warnings, message: 'تم حفظ التعديلات مع تحذير' });
+        } else {
+          console.log('edit-question:success', { id: question.id });
+          onSaved({ message: 'تم حفظ التعديلات بنجاح' });
+        }
       } else {
         setError(res.error);
+        console.error('edit-question:error', { id: question.id, error: res.error });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
+      console.error('edit-question:exception', { id: question?.id, error: err });
     } finally {
       setSaving(false);
     }
@@ -159,6 +174,7 @@ function EditQuestionModal({
       {!question ? null : (
         <Box>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          {!error && warning && <Alert severity="warning" sx={{ mb: 2 }}>{warning}</Alert>}
           <Stack spacing={2}>
             <Input label="نص السؤال" multiline minRows={2} value={text} onChange={(e) => setText(e.target.value)} fullWidth />
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
@@ -222,6 +238,7 @@ export default function ManageQuestionsPage() {
   const [examsByGroup, setExamsByGroup] = React.useState<Map<number, ExamRecord[]>>(new Map());
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [snack, setSnack] = React.useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({ open: false, message: '', severity: 'success' });
 
   const [questionsByExam, setQuestionsByExam] = React.useState<Map<number, QuestionRecord[]>>(new Map());
   const [loadingQuestions, setLoadingQuestions] = React.useState<Map<number, boolean>>(new Map());
@@ -434,10 +451,17 @@ export default function ManageQuestionsPage() {
         open={editOpen}
         onClose={() => setEditOpen(false)}
         question={selectedQuestion}
-        onSaved={async () => {
+        onSaved={async (notice) => {
           setEditOpen(false);
           if (selectedQuestion) {
             await ensureExamQuestionsLoaded(selectedQuestion.exam_id, true);
+          }
+          if (notice?.warnings && notice.warnings.length > 0) {
+            setSnack({ open: true, message: notice.warnings.join('، '), severity: 'warning' });
+          } else if (notice?.message) {
+            setSnack({ open: true, message: notice.message, severity: 'success' });
+          } else {
+            setSnack({ open: true, message: 'تم حفظ التعديلات بنجاح', severity: 'success' });
           }
         }}
       />
@@ -455,8 +479,10 @@ export default function ManageQuestionsPage() {
             setDeleteOpen(false);
             setDeleteError(null);
             await ensureExamQuestionsLoaded(selectedQuestion.exam_id, true);
+            setSnack({ open: true, message: 'تم حذف السؤال بنجاح', severity: 'success' });
           } else {
             setDeleteError(res.error);
+            setSnack({ open: true, message: res.error, severity: 'error' });
           }
         }}
         title="تأكيد حذف السؤال"
@@ -464,6 +490,13 @@ export default function ManageQuestionsPage() {
         impacts={['حذف السؤال من الامتحان']}
         confirmText="تأكيد المسح"
         dangerNote={deleteError ?? undefined}
+      />
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        message={snack.message}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Container>
   );

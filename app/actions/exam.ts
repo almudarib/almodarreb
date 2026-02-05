@@ -425,7 +425,7 @@ type UpdateExamQuestionInput = {
 
 export async function updateExamQuestion(
   input: UpdateExamQuestionInput,
-): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
+): Promise<{ ok: true; warnings?: string[] } | { ok: false; error: string; details?: unknown }> {
   try {
     const supabase = createAdminClient();
     const { data: currentRow, error: fetchErr } = await supabase
@@ -439,6 +439,7 @@ export async function updateExamQuestion(
     if (!currentRow) {
       return { ok: false, error: 'السؤال غير موجود' };
     }
+    const oldUrl = (currentRow as { image_url: string | null }).image_url ?? null;
     const payload: Record<string, unknown> = {};
     if (input.question !== undefined) payload.question = String(input.question).trim();
     if (input.option_a !== undefined) payload.option_a = String(input.option_a).trim();
@@ -446,11 +447,14 @@ export async function updateExamQuestion(
     if (input.option_c !== undefined) payload.option_c = String(input.option_c).trim();
     if (input.option_d !== undefined) payload.option_d = String(input.option_d).trim();
     if (input.correct_option !== undefined) payload.correct_option = input.correct_option;
+    let newUrl: string | null | undefined = undefined;
     if (input.image !== undefined) {
       if (input.image === null) {
         payload.image_url = null;
+        newUrl = null;
       } else if ((input.image as { remove?: boolean })?.remove) {
         payload.image_url = null;
+        newUrl = null;
       } else {
         if ('url' in (input.image as ImageInput)) {
           const candidate = String((input.image as { url: string }).url).trim();
@@ -463,16 +467,57 @@ export async function updateExamQuestion(
           const exists = (dupe ?? []).find((row) => (row as unknown as { id: number }).id !== (input.id as number));
           if (exists) return { ok: false, error: 'هذه الصورة مستخدمة لسؤال آخر' };
           payload.image_url = candidate;
+          newUrl = candidate;
         } else {
           const uploaded = await uploadImage(input.image as ImageInput, { questionId: input.id });
           if (!uploaded.ok) return uploaded;
           payload.image_url = uploaded.url;
+          newUrl = uploaded.url;
         }
       }
     }
     const { error } = await supabase.from('exam_questions').update(payload).eq('id', input.id);
     if (error) {
       return { ok: false, error: error.message, details: error };
+    }
+    const warnings: string[] = [];
+    if (input.image !== undefined) {
+      const changed =
+        (newUrl === null && !!oldUrl) ||
+        (typeof newUrl === 'string' && newUrl && oldUrl !== newUrl) ||
+        ((input.image as { remove?: boolean })?.remove === true);
+      if (changed && oldUrl) {
+        const { data: dupeRows } = await supabase
+          .from('exam_questions')
+          .select('id')
+          .eq('image_url', oldUrl)
+          .neq('id', input.id)
+          .limit(1);
+        const usedByOther = (dupeRows ?? []).length > 0;
+        if (usedByOther) {
+          warnings.push('الصورة القديمة مستخدمة في سؤال آخر');
+        } else {
+          const bucket = 'exam-images';
+          const marker = `/storage/v1/object/public/${bucket}/`;
+          const idx = oldUrl.indexOf(marker);
+          if (idx >= 0) {
+            const relPath = oldUrl.slice(idx + marker.length);
+            try {
+              const { error: remErr } = await supabase.storage.from(bucket).remove([relPath]);
+              if (remErr) {
+                warnings.push('تعذر حذف الصورة القديمة من التخزين');
+              }
+            } catch {
+              warnings.push('تعذر حذف الصورة القديمة من التخزين');
+            }
+          } else {
+            warnings.push('تعذر تحديد مسار الصورة القديمة للحذف');
+          }
+        }
+      }
+    }
+    if (warnings.length > 0) {
+      return { ok: true, warnings };
     }
     return { ok: true };
   } catch (error) {
