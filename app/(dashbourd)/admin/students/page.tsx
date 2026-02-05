@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import { Container, Stack, Typography, Alert, Box, Grid } from '@mui/material';
 import { Card, CardContent } from '@/components/ui';
 import { PeopleRounded, SchoolRounded, PendingActionsRounded } from '@mui/icons-material';
+import StudentsClientShell from '@/components/student/StudentsClientShell';
 
 async function StudentsContent({
   searchParams,
@@ -33,14 +34,23 @@ async function StudentsContent({
     );
   }
 
-  // --- منطق جلب أسماء المعلمين ---
+  // --- منطق جلب أسماء المعلمين (غير مرتبط بترقيم صفحات الطلاب) ---
   const students = res.students;
-  const teacherIds = Array.from(new Set(students.map((s) => s.teacher_id).filter((id) => typeof id === 'number'))) as number[];
+  const supabase = createAdminClient();
+  const { data: roleRow } = await supabase.from('roles').select('id').eq('name', 'teacher').maybeSingle();
+  const roleId = (roleRow?.id as number | undefined) ?? undefined;
+  let teacherOptions: { label: string; value: number }[] = [];
   let teacherNameById = new Map<number, string>();
-  if (teacherIds.length > 0) {
-    const supabase = createAdminClient();
-    const { data: usersRows } = await supabase.from('users').select('id,name').in('id', teacherIds);
-    teacherNameById = new Map<number, string>((usersRows ?? []).map((u) => [u.id as number, u.name as string]));
+  if (roleId) {
+    const { data: urRows } = await supabase.from('user_roles').select('user_id').eq('role_id', roleId);
+    const allTeacherIds = Array.from(
+      new Set((urRows ?? []).map((r) => (r as unknown as { user_id: unknown }).user_id).filter((id) => typeof id === 'number')),
+    ) as number[];
+    if (allTeacherIds.length > 0) {
+      const { data: usersRows } = await supabase.from('users').select('id,name').in('id', allTeacherIds);
+      teacherOptions = (usersRows ?? []).map((u) => ({ label: (u.name as string) ?? `#${u.id}`, value: u.id as number }));
+      teacherNameById = new Map<number, string>(teacherOptions.map((o) => [o.value, o.label]));
+    }
   }
 
   const withTeacher: StudentWithTeacher[] = students.map((s) => ({
@@ -93,15 +103,17 @@ async function StudentsContent({
       }}>
         <CardContent sx={{ p: 0 }}>
           <Box sx={{ p: { xs: 1, md: 2 } }}>
-            <StudentTable
-              students={withTeacher}
-              page={res.page}
-              perPage={res.perPage}
-              total={res.total}
-              sortBy={q.sort_by}
-              sortDir={q.sort_dir}
-              initialSearch={q.search}
-            />
+            <StudentsClientShell teacherOptions={teacherOptions} initialTeacherId={q.teacher_id}>
+              <StudentTable
+                students={withTeacher}
+                page={res.page}
+                perPage={res.perPage}
+                total={res.total}
+                sortBy={q.sort_by}
+                sortDir={q.sort_dir}
+                initialSearch={q.search}
+              />
+            </StudentsClientShell>
           </Box>
         </CardContent>
       </Card>
