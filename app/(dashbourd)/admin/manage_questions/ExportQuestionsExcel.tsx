@@ -75,16 +75,15 @@
         const qs = questionsMap.get(ex.id) ?? [];
         totalQuestions += qs.length;
         const rows = qs.map((q) => ({
-          رقم: q.id,
-          السؤال: q.question,
-          'الخيار A': q.option_a,
-          'الخيار B': q.option_b,
-          'الخيار C': q.option_c,
-          'الخيار D': q.option_d,
-          الصحيح: q.correct_option,
-          'رابط الصورة': q.image_url ?? '',
+          exam_id: ex.id,
+          question: q.question,
+          option_a: q.option_a,
+          option_b: q.option_b,
+          option_c: q.option_c,
+          option_d: q.option_d,
+          correct_option: q.correct_option,
         }));
-        const header = ['رقم', 'السؤال', 'الخيار A', 'الخيار B', 'الخيار C', 'الخيار D', 'الصحيح', 'رابط الصورة'];
+        const header = ['exam_id', 'question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option'];
         sheets.push({ name: sanitizeSheetName(ex.title), header, rows });
       });
       const metaRows = [
@@ -123,16 +122,15 @@
       const res = await listExamQuestions(selectedExamId);
       const qs = res.ok ? res.questions : [];
       const rows = qs.map((q) => ({
-        رقم: q.id,
-        السؤال: q.question,
-        'الخيار A': q.option_a,
-        'الخيار B': q.option_b,
-        'الخيار C': q.option_c,
-        'الخيار D': q.option_d,
-        الصحيح: q.correct_option,
-        'رابط الصورة': q.image_url ?? '',
+        exam_id: selectedExamId as number,
+        question: q.question,
+        option_a: q.option_a,
+        option_b: q.option_b,
+        option_c: q.option_c,
+        option_d: q.option_d,
+        correct_option: q.correct_option,
       }));
-      const header = ['رقم', 'السؤال', 'الخيار A', 'الخيار B', 'الخيار C', 'الخيار D', 'الصحيح', 'رابط الصورة'];
+      const header = ['exam_id', 'question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option'];
       const sheets: Array<{ name: string; header?: string[]; rows: Array<Record<string, unknown>> }> = [];
       sheets.push({ name: sanitizeSheetName(exam.title), header, rows });
       const metaRows = [
