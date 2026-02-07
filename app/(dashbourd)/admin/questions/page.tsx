@@ -206,6 +206,11 @@ export default function AdminQuestionsManualPage() {
                 </MenuItem>
               ))}
             </Input>
+            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+              <Button variant="outlined" startIcon={<AddCircleOutlineRounded />} onClick={addQuestion}>
+                إضافة سؤال يدوي
+              </Button>
+            </Stack>
           </CardContent>
         </Card>
 

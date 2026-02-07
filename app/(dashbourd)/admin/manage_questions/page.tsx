@@ -15,8 +15,15 @@ import {
   AccordionDetails,
   IconButton,
   Snackbar,
+  Divider,
 } from '@mui/material';
-import { ExpandMore, EditOutlined, DeleteOutline, ImageOutlined } from '@mui/icons-material';
+import {
+  ExpandMore,
+  EditOutlined,
+  DeleteOutline,
+  ImageOutlined,
+} from '@mui/icons-material';
+
 import {
   Card,
   CardHeader,
@@ -25,9 +32,9 @@ import {
   Input,
   Modal,
   DeleteWarning,
-  Form,
   Table,
 } from '@/components/ui';
+
 import {
   listExamGroups,
   listExams,
@@ -38,6 +45,12 @@ import {
   updateExamQuestion,
   deleteExamQuestion,
 } from '@/app/actions/exam';
+
+import ExportQuestionsExcel from './ExportQuestionsExcel';
+
+/* ------------------------------------------------------------------ */
+/* Edit Question Modal */
+/* ------------------------------------------------------------------ */
 
 type EditableQuestion = {
   id: number;
@@ -60,103 +73,33 @@ function EditQuestionModal({
   open: boolean;
   onClose: () => void;
   question: EditableQuestion | null;
-  onSaved: (notice?: { warnings?: string[]; message?: string }) => void;
+  onSaved: () => void;
 }) {
-  const [text, setText] = React.useState('');
-  const [a, setA] = React.useState('');
-  const [b, setB] = React.useState('');
-  const [c, setC] = React.useState('');
-  const [d, setD] = React.useState('');
-  const [correct, setCorrect] = React.useState<'A' | 'B' | 'C' | 'D'>('A');
-  const [imageChoice, setImageChoice] = React.useState<
-    { mode: 'keep' } | { mode: 'remove' } | { mode: 'url'; url: string } | { mode: 'upload'; base64: string; filename: string; contentType: string }
-  >({ mode: 'keep' });
+  const [state, setState] = React.useState<EditableQuestion | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [fileInputKey, setFileInputKey] = React.useState(0);
-  const [warning, setWarning] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!question || !open) return;
-    setText(question.question);
-    setA(question.option_a);
-    setB(question.option_b);
-    setC(question.option_c);
-    setD(question.option_d);
-    setCorrect(question.correct_option);
-    setImageChoice({ mode: 'keep' });
-    setError(null);
-    setWarning(null);
-    setFileInputKey((k) => k + 1);
-  }, [question, open]);
-
-  function handleFileChange(file: File | null) {
-    if (!file) {
-      setImageChoice({ mode: 'keep' });
-      return;
+    if (open && question) {
+      setState(question);
+      setError(null);
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.includes('base64,') ? (result.split('base64,').pop() as string) : result;
-      setImageChoice({
-        mode: 'upload',
-        base64,
-        filename: file.name,
-        contentType: file.type || 'application/octet-stream',
-      });
-    };
-    reader.readAsDataURL(file);
-  }
+  }, [open, question]);
 
   async function handleSubmit() {
-    if (!question) return;
+    if (!state) return;
     setSaving(true);
     setError(null);
-    setWarning(null);
-    try {
-      console.log('edit-question:start', { id: question.id, oldImageUrl: question.image_url });
-      const payload: Record<string, unknown> = {
-        id: question.id,
-        question: String(text).trim(),
-        option_a: String(a).trim(),
-        option_b: String(b).trim(),
-        option_c: String(c).trim(),
-        option_d: String(d).trim(),
-        correct_option: correct,
-      };
-      if (imageChoice.mode === 'remove') {
-        payload.image = { remove: true };
-      } else if (imageChoice.mode === 'url') {
-        payload.image = { url: imageChoice.url };
-      } else if (imageChoice.mode === 'upload') {
-        payload.image = {
-          base64: imageChoice.base64,
-          filename: imageChoice.filename,
-          contentType: imageChoice.contentType,
-        };
-      }
-      const res = await updateExamQuestion(payload as any);
-      if (res.ok) {
-        if ((res as any).warnings && Array.isArray((res as any).warnings) && (res as any).warnings.length > 0) {
-          const msg = (res as any).warnings.join('، ');
-          setWarning(msg);
-          console.log('edit-question:warning', { id: question.id, warnings: (res as any).warnings });
-          onSaved({ warnings: (res as any).warnings, message: 'تم حفظ التعديلات مع تحذير' });
-        } else {
-          console.log('edit-question:success', { id: question.id });
-          onSaved({ message: 'تم حفظ التعديلات بنجاح' });
-        }
-      } else {
-        setError(res.error);
-        console.error('edit-question:error', { id: question.id, error: res.error });
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
-      console.error('edit-question:exception', { id: question?.id, error: err });
-    } finally {
-      setSaving(false);
+
+    const res = await updateExamQuestion(state as any);
+
+    if (res.ok) {
+      onSaved();
+    } else {
+      setError(res.error);
     }
+
+    setSaving(false);
   }
 
   return (
@@ -171,332 +114,306 @@ function EditQuestionModal({
       fullWidth
       maxWidth="md"
     >
-      {!question ? null : (
-        <Box>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {!error && warning && <Alert severity="warning" sx={{ mb: 2 }}>{warning}</Alert>}
-          <Stack spacing={2}>
-            <Input label="نص السؤال" multiline minRows={2} value={text} onChange={(e) => setText(e.target.value)} fullWidth />
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <Input label="الخيار A" value={a} onChange={(e) => setA(e.target.value)} fullWidth />
-              <Input label="الخيار B" value={b} onChange={(e) => setB(e.target.value)} fullWidth />
-              <Input label="الخيار C" value={c} onChange={(e) => setC(e.target.value)} fullWidth />
-              <Input label="الخيار D" value={d} onChange={(e) => setD(e.target.value)} fullWidth />
-            </Box>
-            <Input
-              label="الإجابة الصحيحة"
-              select
-              value={correct}
-              onChange={(e) => setCorrect(e.target.value as 'A' | 'B' | 'C' | 'D')}
-              fullWidth
-            >
-              <MenuItem value="A">A</MenuItem>
-              <MenuItem value="B">B</MenuItem>
-              <MenuItem value="C">C</MenuItem>
-              <MenuItem value="D">D</MenuItem>
-            </Input>
-            <Stack spacing={1}>
-              <Typography variant="body2">إدارة الصورة</Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Button variant={imageChoice.mode === 'keep' ? 'contained' : 'outlined'} onClick={() => setImageChoice({ mode: 'keep' })}>
-                  إبقاء الحالية
-                </Button>
-                <Button variant={imageChoice.mode === 'remove' ? 'contained' : 'outlined'} onClick={() => setImageChoice({ mode: 'remove' })} color="error">
-                  إزالة
-                </Button>
-                <Button
-                  variant={imageChoice.mode === 'url' ? 'contained' : 'outlined'}
-                  onClick={() => setImageChoice({ mode: 'url', url: '' })}
-                >
-                  رابط صورة
-                </Button>
-                <label>
-                  <input key={fileInputKey} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFileChange(e.target.files?.[0] || null)} />
-                  <Button component="span" variant={imageChoice.mode === 'upload' ? 'contained' : 'outlined'} startIcon={<ImageOutlined />}>
-                    رفع صورة
-                  </Button>
-                </label>
-              </Stack>
-              {imageChoice.mode === 'url' && (
-                <Input label="الرابط" value={(imageChoice as any).url ?? ''} onChange={(e) => setImageChoice({ mode: 'url', url: e.target.value })} fullWidth />
-              )}
-              {question.image_url && imageChoice.mode === 'keep' && (
-                <Box sx={{ mt: 1, width: 160, height: 100, borderRadius: 2, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                  <img src={question.image_url} alt="question" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </Box>
-              )}
-            </Stack>
-          </Stack>
-        </Box>
+      {!state ? null : (
+        <Stack spacing={2}>
+          {error && <Alert severity="error">{error}</Alert>}
+
+          <Typography fontWeight={700}>نص السؤال</Typography>
+          <Input
+            multiline
+            minRows={2}
+            value={state.question}
+            onChange={(e) =>
+              setState({ ...state, question: e.target.value })
+            }
+          />
+
+          <Divider />
+
+          <Typography fontWeight={700}>الخيارات</Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 2,
+            }}
+          >
+            <Input label="A" value={state.option_a} onChange={(e) => setState({ ...state, option_a: e.target.value })} />
+            <Input label="B" value={state.option_b} onChange={(e) => setState({ ...state, option_b: e.target.value })} />
+            <Input label="C" value={state.option_c} onChange={(e) => setState({ ...state, option_c: e.target.value })} />
+            <Input label="D" value={state.option_d} onChange={(e) => setState({ ...state, option_d: e.target.value })} />
+          </Box>
+
+          <Input
+            select
+            label="الإجابة الصحيحة"
+            value={state.correct_option}
+            onChange={(e) =>
+              setState({
+                ...state,
+                correct_option: e.target.value as any,
+              })
+            }
+          >
+            {['A', 'B', 'C', 'D'].map((o) => (
+              <MenuItem key={o} value={o}>
+                {o}
+              </MenuItem>
+            ))}
+          </Input>
+        </Stack>
       )}
     </Modal>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Page */
+/* ------------------------------------------------------------------ */
+
 export default function ManageQuestionsPage() {
   const [groups, setGroups] = React.useState<ExamGroupRecord[]>([]);
   const [examsByGroup, setExamsByGroup] = React.useState<Map<number, ExamRecord[]>>(new Map());
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [snack, setSnack] = React.useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' }>({ open: false, message: '', severity: 'success' });
-
   const [questionsByExam, setQuestionsByExam] = React.useState<Map<number, QuestionRecord[]>>(new Map());
-  const [loadingQuestions, setLoadingQuestions] = React.useState<Map<number, boolean>>(new Map());
-  const [selectedQuestion, setSelectedQuestion] = React.useState<EditableQuestion | null>(null);
-  const [editOpen, setEditOpen] = React.useState(false);
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
-  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+  const [loadingExam, setLoadingExam] = React.useState<Map<number, boolean>>(new Map());
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const [editQ, setEditQ] = React.useState<EditableQuestion | null>(null);
+  const [editOpen, setEditOpen] = React.useState(false);
+
+  const [deleteQ, setDeleteQ] = React.useState<EditableQuestion | null>(null);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  const [snack, setSnack] = React.useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'warning',
+  });
+
+  React.useEffect(() => {
+    (async () => {
       const g = await listExamGroups();
-      if (!g.ok) {
-        setError(g.error);
-        setGroups([]);
-        setExamsByGroup(new Map());
-        return;
+      const e = await listExams({ page: 1, per_page: 500 });
+
+      if (g.ok) setGroups(g.groups);
+
+      if (e.ok) {
+        const map = new Map<number, ExamRecord[]>();
+        e.exams.forEach((ex) => {
+          const arr = map.get(ex.group_id) ?? [];
+          arr.push(ex);
+          map.set(ex.group_id, arr);
+        });
+        setExamsByGroup(map);
       }
-      setGroups(g.groups);
-      const e = await listExams({ sort_by: 'created_at', sort_dir: 'desc', page: 1, per_page: 500 });
-      if (!e.ok) {
-        setError(e.error);
-        setExamsByGroup(new Map());
-        return;
-      }
-      const byGroup = new Map<number, ExamRecord[]>();
-      for (const ex of e.exams) {
-        const list = byGroup.get(ex.group_id) ?? [];
-        list.push(ex);
-        byGroup.set(ex.group_id, list);
-      }
-      setExamsByGroup(byGroup);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ غير معروف');
-      setGroups([]);
-      setExamsByGroup(new Map());
-    } finally {
-      setLoading(false);
-    }
+    })();
   }, []);
 
-  React.useEffect(() => { load(); }, [load]);
-
-  async function ensureExamQuestionsLoaded(examId: number, force: boolean = false) {
-    const current = questionsByExam.get(examId);
-    if (!force && current && current.length > 0) return;
-    setLoadingQuestions((m) => new Map(m).set(examId, true));
-    try {
-      const res = await listExamQuestions(examId);
-      if (res.ok) {
-        setQuestionsByExam((m) => new Map(m).set(examId, res.questions));
-      }
-    } finally {
-      setLoadingQuestions((m) => new Map(m).set(examId, false));
+  async function loadQuestions(examId: number) {
+    setLoadingExam((m) => new Map(m).set(examId, true));
+    const res = await listExamQuestions(examId);
+    if (res.ok) {
+      setQuestionsByExam((m) => new Map(m).set(examId, res.questions));
     }
-  }
-
-  function handleEdit(q: QuestionRecord) {
-    setSelectedQuestion({
-      id: q.id,
-      exam_id: q.exam_id,
-      question: q.question,
-      option_a: q.option_a,
-      option_b: q.option_b,
-      option_c: q.option_c,
-      option_d: q.option_d,
-      correct_option: q.correct_option,
-      image_url: q.image_url,
-    });
-    setEditOpen(true);
-  }
-
-  function handleDelete(q: QuestionRecord) {
-    setSelectedQuestion({
-      id: q.id,
-      exam_id: q.exam_id,
-      question: q.question,
-      option_a: q.option_a,
-      option_b: q.option_b,
-      option_c: q.option_c,
-      option_d: q.option_d,
-      correct_option: q.correct_option,
-      image_url: q.image_url,
-    });
-    setDeleteError(null);
-    setDeleteOpen(true);
+    setLoadingExam((m) => new Map(m).set(examId, false));
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }} dir="rtl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>إدارة الأسئلة</Typography>
-          <Typography variant="body2" sx={{ color: 'var(--neutral-700)', mt: 0.5 }}>
-            استعرض المجموعات والامتحانات وعدّل أو احذف الأسئلة
-          </Typography>
-        </Box>
-        <Button component={Link} href="/admin/questions" variant="outlined">
-          إضافة أسئلة يدوياً
-        </Button>
+    <Container maxWidth="lg" sx={{ py: 4 }} dir="rtl">
+      {/* Header */}
+      <Stack spacing={1} sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight={800}>
+          إدارة الأسئلة
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          إدارة المجموعات، الامتحانات، وأسئلة الاختيار المتعدد
+        </Typography>
       </Stack>
 
-      <Card elevation={1}>
+      <Card>
         <CardHeader title="المجموعات" />
         <CardContent>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          {loading ? (
-            <Typography>جاري التحميل...</Typography>
-          ) : groups.length === 0 ? (
-            <Typography>لا توجد مجموعات</Typography>
-          ) : (
-            <Stack spacing={2}>
-              {groups.map((g) => {
-                const exams = examsByGroup.get(g.id) ?? [];
-                return (
-                  <Accordion key={g.id}>
-                    <AccordionSummary expandIcon={<ExpandMore />}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography sx={{ fontWeight: 700 }}>{g.title}</Typography>
-                        <Chip label={g.language === 'ar' ? 'العربية' : g.language === 'tr' ? 'التركية' : 'الإنجليزية'} size="small" />
-                        <Chip label={g.is_active ? 'نشطة' : 'غير نشطة'} size="small" />
-                        <Chip label={`${exams.length} امتحان`} size="small" />
-                      </Stack>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      {exams.length === 0 ? (
-                        <Typography sx={{ color: 'text.secondary' }}>لا توجد امتحانات ضمن هذه المجموعة</Typography>
-                      ) : (
-                        <Stack spacing={2}>
-                          {exams.map((ex) => {
-                            const qs = questionsByExam.get(ex.id) ?? [];
-                            const isLoading = (loadingQuestions.get(ex.id) ?? false) === true;
-                            return (
-                              <Card key={ex.id} elevation={0} sx={{ border: '1px solid', borderColor: 'divider' }}>
-                                <CardHeader title={ex.title} />
-                                <CardContent>
-                                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                                    <Chip label={`${qs.length} سؤال`} size="small" />
-                                    <Button variant="outlined" onClick={() => ensureExamQuestionsLoaded(ex.id)}>
-                                      تحميل الأسئلة
-                                    </Button>
-                                  </Stack>
-                                  {isLoading ? (
-                                    <Typography>جاري التحميل...</Typography>
-                                  ) : qs.length === 0 ? (
-                                    <Typography sx={{ color: 'text.secondary' }}>لا توجد أسئلة</Typography>
-                                  ) : (
-                                    <Table
-                                      columns={[
-                                        { id: 'id', label: '#' },
-                                        { id: 'question', label: 'السؤال' },
-                                        {
-                                          id: 'correct',
-                                          label: 'الصحيح',
-                                          render: (q: QuestionRecord) => q.correct_option,
-                                        },
-                                        {
-                                          id: 'image',
-                                          label: 'صورة',
-                                          render: (q: QuestionRecord) =>
-                                            q.image_url ? (
-                                              <IconButton href={q.image_url} target="_blank" rel="noopener noreferrer">
-                                                <ImageOutlined />
-                                              </IconButton>
-                                            ) : (
-                                              '-'
-                                            ),
-                                        },
-                                        {
-                                          id: 'actions',
-                                          label: 'إجراء',
-                                          align: 'right',
-                                          render: (q: QuestionRecord) => (
-                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                              <Button variant="outlined" onClick={() => handleEdit(q)}>
-                                                <EditOutlined fontSize="small" />
-                                              </Button>
-                                              <Button variant="outlined" color="error" onClick={() => handleDelete(q)}>
-                                                <DeleteOutline fontSize="small" />
-                                              </Button>
-                                            </Stack>
-                                          ),
-                                        },
-                                      ]}
-                                      data={qs}
-                                      getRowId={(q) => q.id}
-                                    />
-                                  )}
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </Stack>
-                      )}
-                    </AccordionDetails>
-                  </Accordion>
-                );
-              })}
-            </Stack>
-          )}
+          <ExportQuestionsExcel
+            groups={groups}
+            examsByGroup={examsByGroup}
+            onNotice={(m, s) =>
+              setSnack({ open: true, message: m, severity: s })
+            }
+          />
+
+          <Stack spacing={2}>
+            {groups.map((g) => {
+              const exams = examsByGroup.get(g.id) ?? [];
+              return (
+                <Accordion
+                  key={g.id}
+                  disableGutters
+                  elevation={0}
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                    '&:before': { display: 'none' },
+                  }}
+                >
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Typography fontWeight={700}>{g.title}</Typography>
+                      <Chip size="small" label={g.language} />
+                      <Chip size="small" label={`${exams.length} امتحان`} />
+                    </Stack>
+                  </AccordionSummary>
+
+                  <AccordionDetails>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                        gap: 2,
+                      }}
+                    >
+                      {exams.map((ex) => {
+                        const qs = questionsByExam.get(ex.id) ?? [];
+
+                        // ✅ ترتيب الأسئلة من 1 → n لكل امتحان
+                        const orderedQuestions = qs.map((q, index) => ({
+                          ...q,
+                          _order: index + 1,
+                        }));
+
+                        return (
+                          <Card key={ex.id} variant="outlined">
+                            <CardContent>
+                              <Typography fontWeight={700}>{ex.title}</Typography>
+
+                              {/* زر عرض الأسئلة فقط (بدون 0 سؤال) */}
+                              <Button
+                                size="small"
+                                variant="contained"
+                                sx={{ my: 1 }}
+                                onClick={() => loadQuestions(ex.id)}
+                              >
+                                عرض الأسئلة
+                              </Button>
+
+                              {orderedQuestions.length > 0 && (
+                                <Table
+                                  columns={[
+                                    {
+                                      id: 'order',
+                                      label: '#',
+                                      align: 'center',
+                                      render: (q: any) => q._order,
+                                    },
+                                    {
+                                      id: 'question',
+                                      label: 'السؤال',
+                                      render: (q) => (
+                                        <Typography noWrap maxWidth={220}>
+                                          {q.question}
+                                        </Typography>
+                                      ),
+                                    },
+                                    {
+                                      id: 'correct',
+                                      label: 'الصحيح',
+                                      render: (q) => q.correct_option,
+                                    },
+                                    {
+                                      id: 'image',
+                                      label: 'صورة',
+                                      render: (q) =>
+                                        q.image_url ? (
+                                          <IconButton href={q.image_url} target="_blank">
+                                            <ImageOutlined />
+                                          </IconButton>
+                                        ) : (
+                                          '-'
+                                        ),
+                                    },
+                                    {
+                                      id: 'actions',
+                                      label: 'إجراء',
+                                      align: 'right',
+                                      render: (q) => (
+                                        <Stack direction="row" spacing={1}>
+                                          <IconButton
+                                            color="primary"
+                                            onClick={() => {
+                                              setEditQ(q as any);
+                                              setEditOpen(true);
+                                            }}
+                                          >
+                                            <EditOutlined />
+                                          </IconButton>
+                                          <IconButton
+                                            color="error"
+                                            onClick={() => {
+                                              setDeleteQ(q as any);
+                                              setDeleteOpen(true);
+                                            }}
+                                          >
+                                            <DeleteOutline />
+                                          </IconButton>
+                                        </Stack>
+                                      ),
+                                    },
+                                  ]}
+                                  data={orderedQuestions}
+                                  getRowId={(q) => q.id}
+                                />
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </Box>
+                  </AccordionDetails>
+                </Accordion>
+              );
+            })}
+          </Stack>
         </CardContent>
       </Card>
 
+      {/* Modals */}
       <EditQuestionModal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        question={selectedQuestion}
-        onSaved={async (notice) => {
+        question={editQ}
+        onSaved={() => {
           setEditOpen(false);
-          if (selectedQuestion) {
-            await ensureExamQuestionsLoaded(selectedQuestion.exam_id, true);
-          }
-          if (notice?.warnings && notice.warnings.length > 0) {
-            setSnack({ open: true, message: notice.warnings.join('، '), severity: 'warning' });
-          } else if (notice?.message) {
-            setSnack({ open: true, message: notice.message, severity: 'success' });
-          } else {
-            setSnack({ open: true, message: 'تم حفظ التعديلات بنجاح', severity: 'success' });
-          }
+          setSnack({
+            open: true,
+            message: 'تم تحديث السؤال بنجاح',
+            severity: 'success',
+          });
         }}
       />
 
       <DeleteWarning
         open={deleteOpen}
-        onCancel={() => {
-          setDeleteOpen(false);
-          setDeleteError(null);
-        }}
+        title="تأكيد حذف السؤال"
+        entityName={deleteQ?.question}
+        onCancel={() => setDeleteOpen(false)}
         onConfirm={async () => {
-          if (!selectedQuestion) return;
-          const res = await deleteExamQuestion(selectedQuestion.id);
+          if (!deleteQ) return;
+          const res = await deleteExamQuestion(deleteQ.id);
           if (res.ok) {
+            setSnack({
+              open: true,
+              message: 'تم حذف السؤال بنجاح',
+              severity: 'success',
+            });
             setDeleteOpen(false);
-            setDeleteError(null);
-            await ensureExamQuestionsLoaded(selectedQuestion.exam_id, true);
-            setSnack({ open: true, message: 'تم حذف السؤال بنجاح', severity: 'success' });
-          } else {
-            setDeleteError(res.error);
-            setSnack({ open: true, message: res.error, severity: 'error' });
           }
         }}
-        title="تأكيد حذف السؤال"
-        entityName={selectedQuestion?.question}
-        impacts={['حذف السؤال من الامتحان']}
-        confirmText="تأكيد المسح"
-        dangerNote={deleteError ?? undefined}
       />
+
       <Snackbar
         open={snack.open}
         autoHideDuration={4000}
         onClose={() => setSnack((s) => ({ ...s, open: false }))}
         message={snack.message}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Container>
   );
