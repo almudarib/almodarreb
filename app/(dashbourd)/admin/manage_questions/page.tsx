@@ -334,27 +334,32 @@ export default function ManageQuestionsPage() {
                                       id: 'actions',
                                       label: 'إجراء',
                                       align: 'right',
+                                      sx: { width: 96, whiteSpace: 'nowrap' },
                                       render: (q) => (
-                                        <Stack direction="row" spacing={1}>
-                                          <IconButton
-                                            color="primary"
-                                            onClick={() => {
-                                              setEditQ(q as any);
-                                              setEditOpen(true);
-                                            }}
-                                          >
-                                            <EditOutlined />
-                                          </IconButton>
-                                          <IconButton
-                                            color="error"
-                                            onClick={() => {
-                                              setDeleteQ(q as any);
-                                              setDeleteOpen(true);
-                                            }}
-                                          >
-                                            <DeleteOutline />
-                                          </IconButton>
-                                        </Stack>
+                                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', minWidth: 80 }}>
+                                          <Stack direction="row" spacing={1}>
+                                            <IconButton
+                                              size="small"
+                                              color="primary"
+                                              onClick={() => {
+                                                setEditQ(q as any);
+                                                setEditOpen(true);
+                                              }}
+                                            >
+                                              <EditOutlined fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                              size="small"
+                                              color="error"
+                                              onClick={() => {
+                                                setDeleteQ(q as any);
+                                                setDeleteOpen(true);
+                                              }}
+                                            >
+                                              <DeleteOutline fontSize="small" />
+                                            </IconButton>
+                                          </Stack>
+                                        </Box>
                                       ),
                                     },
                                   ]}
@@ -404,7 +409,21 @@ export default function ManageQuestionsPage() {
               message: 'تم حذف السؤال بنجاح',
               severity: 'success',
             });
+            setQuestionsByExam((prev) => {
+              const m = new Map(prev);
+              const arr = m.get(deleteQ.exam_id) ?? [];
+              const next = arr.filter((q) => q.id !== deleteQ.id);
+              m.set(deleteQ.exam_id, next);
+              return m;
+            });
             setDeleteOpen(false);
+            setDeleteQ(null);
+          } else {
+            setSnack({
+              open: true,
+              message: 'فشل حذف السؤال',
+              severity: 'error',
+            });
           }
         }}
       />

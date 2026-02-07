@@ -19,6 +19,7 @@ export type Column<T> = {
   align?: TableCellProps['align'];
   sortable?: boolean;
   render?: (row: T) => React.ReactNode;
+  sx?: TableCellProps['sx'];
 };
 
 export type DataTableProps<T extends Record<string, unknown>> = Omit<MUITableProps, 'children'> & {
@@ -67,7 +68,7 @@ export function Table<T extends Record<string, unknown>>({
               <TableCell
                 key={col.id}
                 align={col.align}
-                sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}
+                sx={col.sx ? [{ fontWeight: 700, color: 'var(--brand-dark)' }, col.sx as any] : { fontWeight: 700, color: 'var(--brand-dark)' }}
               >
                 {col.sortable ? (
                   <TableSortLabel
@@ -107,7 +108,7 @@ export function Table<T extends Record<string, unknown>>({
                   {columns.map((col) => {
                     const cell = row[col.id];
                     return (
-                      <TableCell key={col.id} align={col.align} sx={{ color: 'var(--brand-dark)' }}>
+                      <TableCell key={col.id} align={col.align} sx={col.sx ? [{ color: 'var(--brand-dark)' }, col.sx as any] : { color: 'var(--brand-dark)' }}>
                         {col.render
                           ? col.render(row)
                           : cell !== undefined
