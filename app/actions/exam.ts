@@ -145,6 +145,10 @@ export async function deleteExam(
 ): Promise<{ ok: true } | { ok: false; error: string; details?: unknown }> {
   try {
     const supabase = createAdminClient();
+    const { error: resErr } = await supabase.from('exam_results').delete().eq('exam_id', id);
+    if (resErr) {
+      return { ok: false, error: resErr.message, details: resErr };
+    }
     const { error } = await supabase.from('exams').delete().eq('id', id);
     if (error) {
       return { ok: false, error: error.message, details: error };
