@@ -77,13 +77,14 @@
         const rows = qs.map((q) => ({
           exam_id: ex.id,
           question: q.question,
+          image_url: q.image_url ?? '',
           option_a: q.option_a,
           option_b: q.option_b,
           option_c: q.option_c,
           option_d: q.option_d,
           correct_option: q.correct_option,
         }));
-        const header = ['exam_id', 'question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option'];
+        const header = ['exam_id', 'question', 'image_url', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option'];
         sheets.push({ name: sanitizeSheetName(ex.title), header, rows });
       });
       const metaRows = [
@@ -124,13 +125,14 @@
       const rows = qs.map((q) => ({
         exam_id: selectedExamId as number,
         question: q.question,
+        image_url: q.image_url ?? '',
         option_a: q.option_a,
         option_b: q.option_b,
         option_c: q.option_c,
         option_d: q.option_d,
         correct_option: q.correct_option,
       }));
-      const header = ['exam_id', 'question', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option'];
+      const header = ['exam_id', 'question', 'image_url', 'option_a', 'option_b', 'option_c', 'option_d', 'correct_option'];
       const sheets: Array<{ name: string; header?: string[]; rows: Array<Record<string, unknown>> }> = [];
       sheets.push({ name: sanitizeSheetName(exam.title), header, rows });
       const metaRows = [
