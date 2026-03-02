@@ -33,6 +33,10 @@ const PALETTE = {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  React.useEffect(() => {
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    if (isMobile) setIsCollapsed(true);
+  }, []);
   
   const sidebarWidth = isCollapsed ? 85 : 280;
 
