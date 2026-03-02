@@ -3,7 +3,7 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Box, Stack, Typography, Pagination, MenuItem, 
-  Chip, Grid, Paper, Tooltip, InputAdornment
+  Chip, Grid, Paper, Tooltip, InputAdornment, CircularProgress
 } from '@mui/material';
 import Table, { type Column } from '@/components/ui/Table';
 import { Button } from '@/components/ui/button';
@@ -59,6 +59,7 @@ export function StudentTable({
 }: StudentTableProps) {
   const router = useRouter();
   const params = useSearchParams();
+  const [isPending, startTransition] = React.useTransition();
   const [search, setSearch] = React.useState(initialSearch ?? '');
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -279,14 +280,23 @@ export function StudentTable({
             />
           </Paper>
 
+          {isPending && (
+            <Stack direction="row" justifyContent="center" alignItems="center" sx={{ color: 'var(--brand-teal)' }} spacing={1}>
+              <CircularProgress size={18} thickness={5} />
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>جار تحميل الطلاب</Typography>
+            </Stack>
+          )}
+
           <Stack direction="row" justifyContent="center">
             <Pagination
               count={Math.max(1, Math.ceil((total ?? students.length) / perPage))}
               page={page}
               onChange={(_, p) => {
-                const qp = new URLSearchParams(params.toString());
-                qp.set('page', String(p));
-                router.push(`?${qp.toString()}`);
+                startTransition(() => {
+                  const qp = new URLSearchParams(params.toString());
+                  qp.set('page', String(p));
+                  router.push(`?${qp.toString()}`);
+                });
               }}
               color="primary"
             />
