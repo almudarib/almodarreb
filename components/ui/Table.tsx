@@ -55,13 +55,14 @@ export function Table<T extends Record<string, unknown>>({
       component={Paper}
       sx={{
         borderRadius: '16px',
-        overflow: 'hidden',
+        overflowX: 'auto',
+        overflowY: 'hidden',
         boxShadow: '0 10px 30px var(--black-03)',
         border: '1px solid var(--neutral-300)',
         bgcolor: 'var(--brand-white)'
       }}
     >
-      <MUITable size="small" {...rest}>
+      <MUITable size="small" sx={{ minWidth: { xs: 720, sm: 'auto' } }} {...rest}>
         <TableHead sx={{ bgcolor: 'var(--brand-white)' }}>
           <TableRow sx={{ borderBottom: '1px solid var(--neutral-200)' }}>
             {columns.map((col) => (

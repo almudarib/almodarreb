@@ -63,10 +63,10 @@ async function StudentsContent({
       {/* Header مع لمسة جمالية */}
       <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} justifyContent="space-between" sx={{ mb: 4 }} spacing={2}>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--brand-dark)', letterSpacing: '-0.5px' }}>
+          <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--brand-dark)', letterSpacing: '-0.5px', fontSize: { xs: '1.4rem', md: '2rem' } }}>
             إدارة <span style={{ color: 'var(--brand-teal)' }}>الطلاب</span>
           </Typography>
-          <Typography variant="body2" sx={{ color: 'var(--neutral-600)', mt: 0.5, fontWeight: 500 }}>
+          <Typography variant="body2" sx={{ color: 'var(--neutral-600)', mt: 0.5, fontWeight: 500, fontSize: { xs: '0.85rem', md: '1rem' } }}>
             يمكنك متابعة تسجيلات الطلاب، الفلترة حسب المعلم، ومراجعة حالات الدفع والاختبارات.
           </Typography>
         </Box>
@@ -79,13 +79,13 @@ async function StudentsContent({
         ].map((stat, i) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
             <Card sx={{ border: '1px solid var(--neutral-200)', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-              <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 }, display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box sx={{ p: 1.5, borderRadius: '14px', bgcolor: `${stat.color}15`, color: stat.color, display: 'flex' }}>
                   {stat.icon}
                 </Box>
                 <Box>
                   <Typography variant="caption" sx={{ color: 'var(--neutral-500)', fontWeight: 700, display: 'block' }}>{stat.label}</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>{stat.value}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800, fontSize: { xs: '1.2rem', md: '1.5rem' } }}>{stat.value}</Typography>
                 </Box>
               </CardContent>
             </Card>

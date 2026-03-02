@@ -3,7 +3,7 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Box, Stack, Typography, Pagination, MenuItem, 
-  Chip, Grid, Paper, Tooltip, InputAdornment, CircularProgress
+  Chip, Grid, Paper, Tooltip, InputAdornment, CircularProgress, useMediaQuery
 } from '@mui/material';
 import Table, { type Column } from '@/components/ui/Table';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,7 @@ export function StudentTable({
   const router = useRouter();
   const params = useSearchParams();
   const [isPending, startTransition] = React.useTransition();
+  const isXs = useMediaQuery('(max-width:600px)');
   const [search, setSearch] = React.useState(initialSearch ?? '');
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -107,70 +108,104 @@ export function StudentTable({
     return `${dd}-${mm}-${yyyy}  ${hh}:${mi}${suffix}`;
   };
 
-  const columns: Column<StudentWithTeacher>[] = [
-    {
-      id: 'name',
-      label: 'الاسم الكامل',
-      sortable: true,
-      render: (row) => (
-        <Typography sx={{ fontWeight: 600 }}>{row.name}</Typography>
-      )
-    },
-    {
-        id: 'status',
-        label: 'الحالة',
-        render: (row) => getStatusChip(row.status)
-    },
-    {
-      id: 'national_id',
-      label: 'رقم الهوية',
-      render: (row) => (
-        <Typography variant="body2" color={/^\d{10,20}$/.test(String(row.national_id)) ? 'text.secondary' : 'error'}>
-          {row.national_id}
-        </Typography>
-      ),
-    },
-    {
-      id: 'teacher_name',
-      label: 'المعلم المشرف',
-      render: (row) => (
-        <Chip label={row.teacher_name ?? 'غير محدد'} variant="outlined" size="small" sx={{ borderRadius: '8px' }} />
-      ),
-    },
-    {
-      id: 'exam_datetime',
-      label: 'تاريخ الامتحان',
-      sortable: true,
-      render: (row) => (
-        <Typography variant="body2" color="text.secondary">
-          {formatDate(row.exam_datetime)}
-        </Typography>
-      ),
-    },
-    {
-      id: 'notes',
-      label: 'ملاحظات',
-      render: (row) => <InlineNotes student={row} />,
-    },
-    {
-      id: 'actions',
-      label: 'خيارات',
-      align: 'right',
-      render: (row) => (
-        <StudentActions
-          student={row}
-          onOpenDetails={(s) => {
-            setSelected(s as StudentWithTeacher);
-            setDetailsOpen(true);
-          }}
-          onOpenEdit={(s) => {
-            setSelected(s as StudentWithTeacher);
-            setEditOpen(true);
-          }}
-        />
-      ),
-    },
-  ];
+  const columns: Column<StudentWithTeacher>[] = isXs
+    ? [
+        {
+          id: 'name',
+          label: 'الطالب',
+          render: (row) => (
+            <Box>
+              <Typography sx={{ fontWeight: 600 }}>{row.name}</Typography>
+              <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                {getStatusChip(row.status)}
+                <Chip label={row.teacher_name ?? 'غير محدد'} variant="outlined" size="small" sx={{ borderRadius: '8px' }} />
+              </Box>
+            </Box>
+          ),
+        },
+        {
+          id: 'actions',
+          label: 'خيارات',
+          align: 'right',
+          render: (row) => (
+            <StudentActions
+              student={row}
+              onOpenDetails={(s) => {
+                setSelected(s as StudentWithTeacher);
+                setDetailsOpen(true);
+              }}
+              onOpenEdit={(s) => {
+                setSelected(s as StudentWithTeacher);
+                setEditOpen(true);
+              }}
+            />
+          ),
+        },
+      ]
+    : [
+        {
+          id: 'name',
+          label: 'الاسم الكامل',
+          sortable: true,
+          render: (row) => (
+            <Typography sx={{ fontWeight: 600 }}>{row.name}</Typography>
+          )
+        },
+        {
+            id: 'status',
+            label: 'الحالة',
+            render: (row) => getStatusChip(row.status)
+        },
+        {
+          id: 'national_id',
+          label: 'رقم الهوية',
+          render: (row) => (
+            <Typography variant="body2" color={/^\d{10,20}$/.test(String(row.national_id)) ? 'text.secondary' : 'error'}>
+              {row.national_id}
+            </Typography>
+          ),
+        },
+        {
+          id: 'teacher_name',
+          label: 'المعلم المشرف',
+          render: (row) => (
+            <Chip label={row.teacher_name ?? 'غير محدد'} variant="outlined" size="small" sx={{ borderRadius: '8px' }} />
+          ),
+        },
+        {
+          id: 'exam_datetime',
+          label: 'تاريخ الامتحان',
+          sortable: true,
+          render: (row) => (
+            <Typography variant="body2" color="text.secondary">
+              {formatDate(row.exam_datetime)}
+            </Typography>
+          ),
+        },
+        {
+          id: 'notes',
+          label: 'ملاحظات',
+          render: (row) => <InlineNotes student={row} />,
+        },
+        {
+          id: 'actions',
+          label: 'خيارات',
+          align: 'right',
+          render: (row) => (
+            <StudentActions
+              student={row}
+              onOpenDetails={(s) => {
+                setSelected(s as StudentWithTeacher);
+                setDetailsOpen(true);
+              }}
+              onOpenEdit={(s) => {
+                setSelected(s as StudentWithTeacher);
+                setEditOpen(true);
+              }}
+            />
+          ),
+        },
+      ];
 
   const applyFilters = () => {
     const qp = new URLSearchParams(params.toString());
@@ -193,21 +228,21 @@ export function StudentTable({
       }}>
         <Stack spacing={3}>
           
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={{ xs: 1.5, sm: 0 }}>
             <Box>
-                <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)' }}>قائمة الطلاب</Typography>
-                <Typography color="text.secondary">إدارة بيانات الطلاب والملاحظات</Typography>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: 'var(--brand-dark)', fontSize: { xs: '1.25rem', md: '1.5rem' } }}>قائمة الطلاب</Typography>
+                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>إدارة بيانات الطلاب والملاحظات</Typography>
             </Box>
             <Button 
                 variant="contained" 
-                className="bg-[var(--brand-teal)] hover:bg-[var(--brand-teal-hover)] text-white gap-2 px-6 h-12 rounded-xl"
+                className="bg-[var(--brand-teal)] hover:bg-[var(--brand-teal-hover)] text-white gap-2 px-4 md:px-6 h-10 md:h-12 rounded-xl w-full sm:w-auto"
                 onClick={() => setAddOpen(true)}
             >
               <Add /> إضافة طالب جديد
             </Button>
           </Stack>
 
-          <Paper sx={{ p: 3, borderRadius: '16px', border: '1px solid var(--neutral-200)' }}>
+          <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: '16px', border: '1px solid var(--neutral-200)' }}>
             <Grid container spacing={2} alignItems="flex-end">
               <Grid size={{ xs: 12, md: 4 }}>
                 <Input
@@ -299,6 +334,9 @@ export function StudentTable({
                 });
               }}
               color="primary"
+              size={isXs ? 'small' : 'medium'}
+              siblingCount={isXs ? 0 : 1}
+              boundaryCount={isXs ? 1 : 2}
             />
           </Stack>
         </Stack>
