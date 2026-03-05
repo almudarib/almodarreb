@@ -1,8 +1,7 @@
 'use client';
 import * as React from 'react';
 import type { StudentRecord } from '@/app/actions/students';
-import { updateStudent, getStudentProgress, getStudentLoginHistory } from '@/app/actions/students';
-import type { UpdateStudentInput } from '@/app/actions/students';
+import { getStudentProgress, getStudentLoginHistory, updateStudent } from '@/app/actions/students';
 import StudentProgress from '@/components/student/StudentProgress';
 import type { StudentProgressData } from '@/app/actions/students';
 import type { StudentLoginEvent } from '@/app/actions/students';
@@ -27,11 +26,18 @@ export function StudentDetailsModal({
   teacherName,
 }: StudentDetailsModalProps) {
   const router = useRouter();
-  const [saving, setSaving] = React.useState(false);
   const [progress, setProgress] = React.useState<StudentProgressData | null>(null);
   const [loginOpen, setLoginOpen] = React.useState(false);
   const [loginLoading, setLoginLoading] = React.useState(false);
   const [loginHistory, setLoginHistory] = React.useState<StudentLoginEvent[] | null>(null);
+  const [lastLoginAt, setLastLoginAt] = React.useState<string | null>(null);
+  const [showExams, setShowExams] = React.useState<boolean>(!!student?.show_exams);
+  const [autoHideApplied, setAutoHideApplied] = React.useState(false);
+
+  React.useEffect(() => {
+    setShowExams(!!student?.show_exams);
+    setAutoHideApplied(false);
+  }, [student]);
 
   React.useEffect(() => {
     // تحميل التقدم عند فتح النافذة
@@ -68,6 +74,42 @@ export function StudentDetailsModal({
       active = false;
     };
   }, [student, loginOpen]);
+
+  React.useEffect(() => {
+    let active = true;
+    async function loadLastLogin() {
+      if (!student || !open) return;
+      const r = await getStudentLoginHistory(student.id);
+      if (!active) return;
+      if (r.ok && r.events.length > 0) setLastLoginAt(r.events[0].logged_in_at);
+      else setLastLoginAt(null);
+    }
+    loadLastLogin();
+    return () => {
+      active = false;
+    };
+  }, [open, student]);
+
+  React.useEffect(() => {
+    async function maybeAutoHideExams() {
+      if (!open || !student || autoHideApplied) return;
+      const last = lastLoginAt ?? student.last_login_at;
+      if (!last) return;
+      const lastDate = new Date(String(last));
+      const daysInactive = (Date.now() - lastDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysInactive > 60 && showExams) {
+        const res = await updateStudent({ id: student.id, show_exams: false });
+        setAutoHideApplied(true);
+        if (res.ok) {
+          setShowExams(false);
+          try {
+            router.refresh();
+          } catch {}
+        }
+      }
+    }
+    maybeAutoHideExams();
+  }, [open, student, lastLoginAt, showExams, autoHideApplied, router]);
 
   async function handleSubmit() {
     onClose();
@@ -142,7 +184,7 @@ export function StudentDetailsModal({
                 </TableRow>
                 <TableRow>
                   <TableCell>آخر تسجيل دخول</TableCell>
-                  <TableCell>{formatDate(student.last_login_at)}</TableCell>
+                  <TableCell>{formatDate(lastLoginAt ?? student.last_login_at)}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>الأستاذ المشرف</TableCell>
@@ -154,7 +196,7 @@ export function StudentDetailsModal({
                 </TableRow>
                 <TableRow>
                   <TableCell>إظهار الاختبارات</TableCell>
-                  <TableCell>{student.show_exams ? 'نعم' : 'لا'}</TableCell>
+                  <TableCell>{showExams ? 'نعم' : 'لا'}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell>ملاحظة</TableCell>
