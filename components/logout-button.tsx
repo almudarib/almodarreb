@@ -13,15 +13,37 @@ export function LogoutButton({
   ...props
 }: Omit<ButtonProps, "onClick"> & { label?: React.ReactNode; isCollapsed?: boolean }) {
   const router = useRouter();
+  const [loading, setLoading] = React.useState(false);
 
   const logout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/auth/login");
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } finally {
+      try {
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage?.clear?.();
+          } catch {}
+          try {
+            window.sessionStorage?.clear?.();
+          } catch {}
+          try {
+            const names = ["app_role"];
+            names.forEach((n) => {
+              document.cookie = `${n}=; Max-Age=0; path=/`;
+            });
+          } catch {}
+        }
+      } catch {}
+      router.replace("/auth/login");
+    }
   };
 
   return (
     <Button
+      loading={loading}
       onClick={logout}
       sx={
         sx
