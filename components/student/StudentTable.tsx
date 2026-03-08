@@ -3,7 +3,7 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Box, Stack, Typography, Pagination, MenuItem, 
-  Chip, Grid, Paper, Tooltip, InputAdornment, CircularProgress, useMediaQuery
+  Chip, Grid, Paper, Tooltip, InputAdornment, CircularProgress, useMediaQuery, Checkbox
 } from '@mui/material';
 import Table, { type Column } from '@/components/ui/Table';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,9 @@ import AddStudentModal from '@/components/student/AddStudentModal';
 import { updateStudent, type StudentRecord } from '@/app/actions/students';
 import { TextField as MuiTextField } from '@mui/material';
 import { StudentUIProvider } from '@/components/student/StudentUIContext';
+import { useStudentBulkOptional } from '@/components/student/StudentBulkContext';
+import { DeleteWarning } from '@/components/ui/DeleteWarning';
+import { Modal } from '@/components/ui/Modal';
 
 // --- تعريف الأنواع (Interfaces) لضمان عدم ظهور أخطاء Cannot find name ---
 export type StudentWithTeacher = StudentRecord & {
@@ -70,6 +73,16 @@ export function StudentTable({
   const [examFrom, setExamFrom] = React.useState<string>('');
   const [examTo, setExamTo] = React.useState<string>('');
   const [selected, setSelected] = React.useState<StudentWithTeacher | null>(null);
+  const bulkCtx = useStudentBulkOptional();
+  const [bulkLoading, setBulkLoading] = React.useState<'del' | 'pass' | 'fail' | null>(null);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = React.useState(false);
+  const [bulkAction, setBulkAction] = React.useState<null | 'del' | 'pass' | 'fail'>(null);
+  const [needTeacherOpen, setNeedTeacherOpen] = React.useState(false);
+  const teacherId = (() => {
+    const tidRaw = params.get('teacher_id') ?? '';
+    const n = Number(tidRaw);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  })();
 
   React.useEffect(() => {
     const qp = new URLSearchParams(params.toString());
@@ -120,6 +133,21 @@ export function StudentTable({
 
   const columns: Column<StudentWithTeacher>[] = isXs
     ? [
+        ...(bulkCtx
+          ? [
+              {
+                id: 'exclude',
+                label: 'استثناء',
+                render: (row) => (
+                  <Checkbox
+                    checked={bulkCtx.excludedIds.includes(row.id)}
+                    onChange={(e) => bulkCtx.toggleExcluded(row.id, e.target.checked)}
+                    sx={{ p: 0.5 }}
+                  />
+                ),
+              } as Column<StudentWithTeacher>,
+            ]
+          : []),
         {
           id: 'name',
           label: 'الطالب',
@@ -153,6 +181,22 @@ export function StudentTable({
         },
       ]
     : [
+        ...(bulkCtx
+          ? [
+              {
+                id: 'exclude',
+                label: 'استثناء',
+                render: (row) => (
+                  <Checkbox
+                    checked={bulkCtx.excludedIds.includes(row.id)}
+                    onChange={(e) => bulkCtx.toggleExcluded(row.id, e.target.checked)}
+                    sx={{ p: 0.5 }}
+                  />
+                ),
+                sx: { width: 72 },
+              } as Column<StudentWithTeacher>,
+            ]
+          : []),
         {
           id: 'name',
           label: 'الاسم الكامل',
@@ -251,6 +295,179 @@ export function StudentTable({
               <Add /> إضافة طالب جديد
             </Button>
           </Stack>
+          
+          {bulkCtx ? (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}>
+                عمليات جماعية (المعلم المحدد): {teacherId ? (bulkCtx.excludedIds.length > 0 ? `مستثنى: ${bulkCtx.excludedIds.length}` : 'لا يوجد استثناءات') : 'اختر المعلم أولاً'}
+              </Typography>
+              <Box sx={{ flex: 1 }} />
+              <Button
+                variant="outlined"
+                color="error"
+                disabled={bulkLoading !== null}
+                loading={bulkLoading === 'del'}
+                loadingText="جارِ الحذف"
+                onClick={() => {
+                  if (!teacherId) {
+                    setNeedTeacherOpen(true);
+                    return;
+                  }
+                  setBulkAction('del');
+                  setBulkConfirmOpen(true);
+                }}
+              >
+                حذف الكل باستثناء المحددين
+              </Button>
+              <Button
+                variant="outlined"
+                disabled={bulkLoading !== null}
+                loading={bulkLoading === 'pass'}
+                loadingText="جارِ التنفيذ"
+                onClick={() => {
+                  if (!teacherId) {
+                    setNeedTeacherOpen(true);
+                    return;
+                  }
+                  setBulkAction('pass');
+                  setBulkConfirmOpen(true);
+                }}
+              >
+                تعيين الكل ناجح
+              </Button>
+              <Button
+                variant="outlined"
+                disabled={bulkLoading !== null}
+                loading={bulkLoading === 'fail'}
+                loadingText="جارِ التنفيذ"
+                onClick={() => {
+                  if (!teacherId) {
+                    setNeedTeacherOpen(true);
+                    return;
+                  }
+                  setBulkAction('fail');
+                  setBulkConfirmOpen(true);
+                }}
+              >
+                تعيين الكل راسب
+              </Button>
+              <Modal
+                open={needTeacherOpen}
+                title="تنبيه"
+                onCancel={() => setNeedTeacherOpen(false)}
+                onSubmit={() => setNeedTeacherOpen(false)}
+                submitText="موافق"
+                cancelText="إلغاء"
+              >
+                يجب اختيار المعلم أولاً من شريط الفلترة أعلى الصفحة لتنفيذ العملية الجماعية.
+              </Modal>
+              <DeleteWarning
+                open={bulkConfirmOpen}
+                title={
+                  bulkAction === 'del'
+                    ? 'تأكيد الحذف الجماعي'
+                    : bulkAction === 'pass'
+                    ? 'تأكيد تعيين الكل ناجح (مع الحذف)'
+                    : bulkAction === 'fail'
+                    ? 'تأكيد تعيين الكل راسب'
+                    : 'تأكيد'
+                }
+                entityName={teacherId ? `للمعلم رقم #${teacherId}` : undefined}
+                description={
+                  bulkAction === 'del'
+                    ? 'سيتم حذف جميع طلاب هذا المعلم نهائياً باستثناء الطلاب المحددين كـ مستثنين.'
+                    : bulkAction === 'pass'
+                    ? 'سيتم حذف جميع طلاب هذا المعلم مع اعتبارهم ناجحين، باستثناء المستثنين.'
+                    : bulkAction === 'fail'
+                    ? 'سيتم تعيين حالة جميع طلاب هذا المعلم إلى "راسب" باستثناء المستثنين.'
+                    : undefined
+                }
+                impacts={
+                  bulkAction === 'del'
+                    ? ['حذف حسابات الطلاب نهائياً', 'حذف سجلات المحاسبة', 'حذف سجل الإجراءات']
+                    : bulkAction === 'pass'
+                    ? ['حذف جميع سجلات الطلاب نهائياً']
+                    : bulkAction === 'fail'
+                    ? ['تحديث حالة الطلاب إلى "راسب"']
+                    : undefined
+                }
+                confirmText={
+                  bulkAction === 'del'
+                    ? 'تأكيد الحذف الجماعي'
+                    : bulkAction === 'pass'
+                    ? 'تأكيد التعيين والحذف'
+                    : bulkAction === 'fail'
+                    ? 'تأكيد التعيين كراسب'
+                    : 'تأكيد'
+                }
+                cancelText="إلغاء"
+                onCancel={() => {
+                  setBulkConfirmOpen(false);
+                  setBulkAction(null);
+                }}
+                onConfirm={async () => {
+                  if (!teacherId || !bulkAction) return;
+                  if (bulkAction === 'del') {
+                    setBulkLoading('del');
+                    try {
+                      const resp = await fetch('/api/admin/students/bulk-delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ teacher_id: teacherId, exclude_ids: bulkCtx.excludedIds }),
+                      });
+                      const res = await resp.json();
+                      setBulkLoading(null);
+                      setBulkConfirmOpen(false);
+                      setBulkAction(null);
+                      if (res?.ok) {
+                        bulkCtx.clearExcluded();
+                        startTransition(() => {
+                          router.refresh();
+                        });
+                      } else {
+                        if (typeof window !== 'undefined') alert(res?.error ?? 'فشل تنفيذ العملية');
+                      }
+                    } catch {
+                      setBulkLoading(null);
+                      setBulkConfirmOpen(false);
+                      setBulkAction(null);
+                      if (typeof window !== 'undefined') alert('حدث خطأ بالشبكة');
+                    }
+                  } else if (bulkAction === 'pass' || bulkAction === 'fail') {
+                    setBulkLoading(bulkAction);
+                    try {
+                      const resp = await fetch('/api/admin/students/bulk-status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          teacher_id: teacherId,
+                          status: bulkAction === 'pass' ? 'passed' : 'failed',
+                          exclude_ids: bulkCtx.excludedIds,
+                        }),
+                      });
+                      const res = await resp.json();
+                      setBulkLoading(null);
+                      setBulkConfirmOpen(false);
+                      setBulkAction(null);
+                      if (res?.ok) {
+                        bulkCtx.clearExcluded();
+                        startTransition(() => {
+                          router.refresh();
+                        });
+                      } else {
+                        if (typeof window !== 'undefined') alert(res?.error ?? 'فشل تنفيذ العملية');
+                      }
+                    } catch {
+                      setBulkLoading(null);
+                      setBulkConfirmOpen(false);
+                      setBulkAction(null);
+                      if (typeof window !== 'undefined') alert('حدث خطأ بالشبكة');
+                    }
+                  }
+                }}
+              />
+            </Stack>
+          ) : null}
 
           <Paper sx={{ p: { xs: 2, md: 3 }, borderRadius: '16px', border: '1px solid var(--neutral-200)' }}>
             <Grid container spacing={2} alignItems="flex-end">

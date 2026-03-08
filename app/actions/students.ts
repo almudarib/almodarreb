@@ -1094,6 +1094,144 @@ export async function setStudentStatus(
   }
 }
 
+export async function bulkDeleteStudentsForTeacher(input: {
+  teacher_id: number;
+  exclude_ids?: number[];
+}): Promise<{ ok: true; affected: number } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isAdmin = roleNames.includes('admin');
+    if (!isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const supabase = createAdminClient();
+    const { data: rows, error: listErr } = await supabase
+      .from('students')
+      .select('id')
+      .eq('teacher_id', input.teacher_id);
+    if (listErr) {
+      return { ok: false, error: listErr.message, details: listErr };
+    }
+    let ids = Array.from(
+      new Set(
+        (rows ?? [])
+          .map((r) => (r as unknown as { id?: number }).id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
+    const exclude = Array.isArray(input.exclude_ids) ? input.exclude_ids : [];
+    if (exclude.length > 0) {
+      const exSet = new Set(exclude);
+      ids = ids.filter((id) => !exSet.has(id));
+    }
+    if (ids.length === 0) {
+      return { ok: true, affected: 0 };
+    }
+    const { error: actDelErr } = await supabase.from('student_actions').delete().in('student_id', ids);
+    if (actDelErr) {
+      return { ok: false, error: actDelErr.message, details: actDelErr };
+    }
+    const { error: accErr } = await supabase.from('accounting').delete().in('student_id', ids);
+    if (accErr) {
+      return { ok: false, error: accErr.message, details: accErr };
+    }
+    const { error: delErr } = await supabase.from('students').delete().in('id', ids);
+    if (delErr) {
+      return { ok: false, error: delErr.message, details: delErr };
+    }
+    return { ok: true, affected: ids.length };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
+export async function bulkSetStatusForTeacher(input: {
+  teacher_id: number;
+  status: 'passed' | 'failed';
+  exclude_ids?: number[];
+}): Promise<{ ok: true; affected: number } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    if (!uid) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isAdmin = roleNames.includes('admin');
+    if (!isAdmin) {
+      return { ok: false, error: 'غير مصرح | Unauthorized' };
+    }
+    const supabase = createAdminClient();
+    const { data: rows, error: listErr } = await supabase
+      .from('students')
+      .select('id')
+      .eq('teacher_id', input.teacher_id);
+    if (listErr) {
+      return { ok: false, error: listErr.message, details: listErr };
+    }
+    let ids = Array.from(
+      new Set(
+        (rows ?? [])
+          .map((r) => (r as unknown as { id?: number }).id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
+    const exclude = Array.isArray(input.exclude_ids) ? input.exclude_ids : [];
+    if (exclude.length > 0) {
+      const exSet = new Set(exclude);
+      ids = ids.filter((id) => !exSet.has(id));
+    }
+    if (ids.length === 0) {
+      return { ok: true, affected: 0 };
+    }
+    const { error: updErr } = await supabase.from('students').update({ status: input.status }).in('id', ids);
+    if (updErr) {
+      return { ok: false, error: updErr.message, details: updErr };
+    }
+    for (const sid of ids) {
+      await supabase.from('student_actions').insert({
+        student_id: sid,
+        action: 'status',
+        action_by: userId as number,
+      });
+    }
+    return { ok: true, affected: ids.length };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+
 export type StudentProgressData = {
   totalStudyMinutes: number;
   examsTaken: number;
