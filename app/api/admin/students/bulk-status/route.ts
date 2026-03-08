@@ -1,6 +1,6 @@
 'use server';
 import { NextResponse } from 'next/server';
-import { bulkSetStatusForTeacher, bulkDeleteStudentsForTeacher } from '@/app/actions/students';
+import { bulkSetStatusForTeacher } from '@/app/actions/students';
 
 export async function POST(request: Request) {
   try {
@@ -15,11 +15,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: 'status غير صالح' }, { status: 400 });
     }
     if (status === 'passed') {
-      const del = await bulkDeleteStudentsForTeacher({ teacher_id, exclude_ids });
-      if (!del.ok) {
-        return NextResponse.json({ ok: false, error: del.error }, { status: 400 });
+      const upd = await bulkSetStatusForTeacher({ teacher_id, status: 'passed', exclude_ids });
+      if (!upd.ok) {
+        return NextResponse.json({ ok: false, error: upd.error }, { status: 400 });
       }
-      return NextResponse.json({ ok: true, affected: del.affected });
+      return NextResponse.json({ ok: true, affected: upd.affected });
     } else {
       const upd = await bulkSetStatusForTeacher({ teacher_id, status: 'failed', exclude_ids });
       if (!upd.ok) {

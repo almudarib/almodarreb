@@ -141,7 +141,7 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? 'تأكيد حذف الأجهزة'
             : confirmAction === 'delete'
-            ? 'تأكيد حذف الطالب'
+            ? 'تأكيد تعطيل الطالب'
             : confirmAction === 'pass'
             ? 'تأكيد جعل الطالب ناجح'
             : confirmAction === 'fail'
@@ -153,9 +153,9 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? 'سيتم حذف جميع الأجهزة المرتبطة بهذا الطالب نهائيًا.'
             : confirmAction === 'delete'
-            ? 'سيتم حذف هذا الطالب نهائيًا ولا يمكن التراجع.'
+            ? 'سيتم تعطيل هذا الطالب وإيقاف الاختبارات له، وستبقى سجلات المحاسبة كما هي.'
             : confirmAction === 'pass'
-            ? 'سيتم حذف سجل الطالب نهائيًا مع تسجيل الحالة كـ ناجح.'
+            ? 'سيتم تعيين الحالة كـ ناجح دون حذف السجلات.'
             : confirmAction === 'fail'
             ? 'سيتم مسح جلسات الطالب ونتائج الامتحانات وتعيين الحالة "راسب".'
             : undefined
@@ -164,9 +164,9 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? ['حذف جميع الأجهزة المسجلة للطالب']
             : confirmAction === 'delete'
-            ? ['حذف الحساب نهائيًا', 'حذف سجلات المحاسبة', 'حذف سجل الإجراءات']
+            ? ['إيقاف عرض الاختبارات والحساب', 'الإبقاء على سجلات المحاسبة', 'يمكن إظهاره لاحقًا']
             : confirmAction === 'pass'
-            ? ['حذف سجل الطالب نهائيًا']
+            ? ['تعيين الحالة: ناجح']
             : confirmAction === 'fail'
             ? ['مسح جميع الجلسات', 'حذف نتائج الامتحانات', 'تعيين الحالة: راسب']
             : undefined
@@ -175,7 +175,7 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? 'تأكيد حذف الأجهزة'
             : confirmAction === 'delete'
-            ? 'تأكيد حذف الطالب'
+            ? 'تأكيد التعطيل'
             : confirmAction === 'pass'
             ? 'تأكيد النجاح'
             : confirmAction === 'fail'

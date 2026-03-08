@@ -276,18 +276,20 @@ export async function deleteStudent(
     } else if (!isAdmin) {
       return { ok: false, error: 'غير مصرح | Unauthorized' };
     }
-    const { error: actDelErr } = await supabase.from('student_actions').delete().eq('student_id', studentId);
-    if (actDelErr) {
-      return { ok: false, error: actDelErr.message, details: actDelErr };
+    const { error: updErr } = await supabase
+      .from('students')
+      .update({ status: 'failed', show_exams: false })
+      .eq('id', studentId);
+    if (updErr) {
+      return { ok: false, error: updErr.message, details: updErr };
     }
-    const { error: accErr } = await supabase.from('accounting').delete().eq('student_id', studentId);
-    if (accErr) {
-      return { ok: false, error: accErr.message, details: accErr };
-    }
-    const { error: delErr } = await supabase.from('students').delete().eq('id', studentId);
-    if (delErr) {
-      return { ok: false, error: delErr.message, details: delErr };
-    }
+    try {
+      await supabase.from('student_actions').insert({
+        student_id: studentId,
+        action: 'status',
+        action_by: userId as number,
+      });
+    } catch {}
     return { ok: true };
   } catch (error) {
     return {
@@ -1141,18 +1143,19 @@ export async function bulkDeleteStudentsForTeacher(input: {
     if (ids.length === 0) {
       return { ok: true, affected: 0 };
     }
-    const { error: actDelErr } = await supabase.from('student_actions').delete().in('student_id', ids);
-    if (actDelErr) {
-      return { ok: false, error: actDelErr.message, details: actDelErr };
+    const { error: updErr } = await supabase.from('students').update({ status: 'failed', show_exams: false }).in('id', ids);
+    if (updErr) {
+      return { ok: false, error: updErr.message, details: updErr };
     }
-    const { error: accErr } = await supabase.from('accounting').delete().in('student_id', ids);
-    if (accErr) {
-      return { ok: false, error: accErr.message, details: accErr };
-    }
-    const { error: delErr } = await supabase.from('students').delete().in('id', ids);
-    if (delErr) {
-      return { ok: false, error: delErr.message, details: delErr };
-    }
+    try {
+      for (const sid of ids) {
+        await supabase.from('student_actions').insert({
+          student_id: sid,
+          action: 'status',
+          action_by: userId as number,
+        });
+      }
+    } catch {}
     return { ok: true, affected: ids.length };
   } catch (error) {
     return {
@@ -1626,6 +1629,12 @@ export async function listStudents(
         { count: 'exact' },
       );
 
+    if (!q.status && isTeacher) {
+      builder = builder.eq('status', 'active');
+    }
+    if (q.show_exams === undefined && isTeacher) {
+      builder = builder.eq('show_exams', true);
+    }
     if (q.status) {
       const s = String(q.status).trim().toLowerCase();
       const mapped =
@@ -1633,8 +1642,6 @@ export async function listStudents(
           ? null
           : s === 'نشط'
           ? 'active'
-          : s === 'غير نشط'
-          ? 'inactive'
           : s === 'ناجح'
           ? 'passed'
           : s === 'راسب'

@@ -514,6 +514,17 @@ export async function getTeacherAccountingDetails(
         pending_entries: info.count,
       };
     });
+    const existingIds = new Set<number>((studentsRows ?? []).map((s) => s.id as number));
+    for (const [sid, info] of pendingByStudent.entries()) {
+      if (!existingIds.has(sid) && info.sum > 0 && info.count > 0) {
+        students.push({
+          student_id: sid,
+          student_name: `طالب #${sid}`,
+          pending_amount: info.sum,
+          pending_entries: info.count,
+        });
+      }
+    }
     const filteredStudents = students.filter((s) => s.pending_amount > 0 && s.pending_entries > 0);
     const total_due = filteredStudents.reduce((sum, s) => sum + s.pending_amount, 0);
     const details: TeacherAccountingDetails = {
