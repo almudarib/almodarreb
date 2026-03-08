@@ -5,14 +5,20 @@ export type StudentBulkContextValue = {
   excludedIds: number[];
   toggleExcluded: (id: number, excluded: boolean) => void;
   clearExcluded: () => void;
+  teacherId?: number;
+  teacherName?: string;
 };
 
 const StudentBulkContext = React.createContext<StudentBulkContextValue | null>(null);
 
 export function StudentBulkProvider({
   children,
+  teacherId,
+  teacherName,
 }: {
   children: React.ReactNode;
+  teacherId?: number;
+  teacherName?: string;
 }) {
   const [excludedIds, setExcludedIds] = React.useState<number[]>([]);
   const toggleExcluded = React.useCallback((id: number, excluded: boolean) => {
@@ -25,8 +31,8 @@ export function StudentBulkProvider({
   }, []);
   const clearExcluded = React.useCallback(() => setExcludedIds([]), []);
   const value = React.useMemo(
-    () => ({ excludedIds, toggleExcluded, clearExcluded }),
-    [excludedIds, toggleExcluded, clearExcluded],
+    () => ({ excludedIds, toggleExcluded, clearExcluded, teacherId, teacherName }),
+    [excludedIds, toggleExcluded, clearExcluded, teacherId, teacherName],
   );
   return <StudentBulkContext.Provider value={value}>{children}</StudentBulkContext.Provider>;
 }
@@ -40,4 +46,3 @@ export function useStudentBulk() {
   if (!ctx) throw new Error('StudentBulkContext not found');
   return ctx;
 }
-

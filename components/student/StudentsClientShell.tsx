@@ -20,6 +20,12 @@
    React.useEffect(() => {
      setLoading(false);
    }, [initialTeacherId, sp?.toString()]);
+  const selectedTeacherId = initialTeacherId;
+  const selectedTeacherName = React.useMemo(() => {
+    if (selectedTeacherId === undefined || selectedTeacherId === null) return undefined;
+    const match = teacherOptions.find((o) => o.value === selectedTeacherId);
+    return match?.label;
+  }, [teacherOptions, selectedTeacherId]);
    return (
      <Box>
        <TeacherFilterBar
@@ -27,7 +33,7 @@
          initialTeacherId={initialTeacherId}
          onNavigating={() => setLoading(true)}
        />
-       <StudentBulkProvider>
+      <StudentBulkProvider teacherId={selectedTeacherId} teacherName={selectedTeacherName}>
          {loading ? (
            <Box sx={{ height: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
              <Box sx={{ width: 48, height: 48, border: '4px solid #f3f3f3', borderTop: '4px solid var(--brand-teal)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />

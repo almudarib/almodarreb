@@ -299,7 +299,9 @@ export function StudentTable({
           {bulkCtx ? (
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography sx={{ fontWeight: 700, color: 'var(--brand-dark)' }}>
-                عمليات جماعية (المعلم المحدد): {teacherId ? (bulkCtx.excludedIds.length > 0 ? `مستثنى: ${bulkCtx.excludedIds.length}` : 'لا يوجد استثناءات') : 'اختر المعلم أولاً'}
+                {teacherId
+                  ? `المعلم المحدد: ${bulkCtx?.teacherName ?? `#${teacherId}`} — ${bulkCtx.excludedIds.length > 0 ? `مستثنى: ${bulkCtx.excludedIds.length}` : 'لا يوجد استثناءات'}`
+                  : 'اختر المعلم أولاً'}
               </Typography>
               <Box sx={{ flex: 1 }} />
               <Button
@@ -372,7 +374,7 @@ export function StudentTable({
                     ? 'تأكيد تعيين الكل راسب'
                     : 'تأكيد'
                 }
-                entityName={teacherId ? `للمعلم رقم #${teacherId}` : undefined}
+                entityName={teacherId ? `للمعلم ${bulkCtx?.teacherName ?? `رقم #${teacherId}`}` : undefined}
                 description={
                   bulkAction === 'del'
                     ? 'سيتم حذف جميع طلاب هذا المعلم نهائياً باستثناء الطلاب المحددين كـ مستثنين.'
