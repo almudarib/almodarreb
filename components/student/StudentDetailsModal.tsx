@@ -168,7 +168,6 @@ export function StudentDetailsModal({
       open={open}
       onClose={onClose}
       title="بيانات الطالب"
-      submitText="غير متاح"
       cancelText="إغلاق"
       onSubmit={handleSubmit}
       onCancel={onClose}

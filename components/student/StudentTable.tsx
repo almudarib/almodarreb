@@ -9,7 +9,7 @@ import Table, { type Column } from '@/components/ui/Table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  Search, FilterList, Add, CheckCircle, Cancel, HourglassEmpty 
+  Search, Add, CheckCircle, Cancel, HourglassEmpty 
 } from '@mui/icons-material';
 import StudentActions from '@/components/student/StudentActions';
 import StudentDetailsModal from '@/components/student/StudentDetailsModal';
@@ -88,10 +88,20 @@ export function StudentTable({
       if (search) qp.set('search', search);
       else qp.delete('search');
       qp.set('page', '1');
-      router.push(`?${qp.toString()}`);
+      startTransition(() => {
+        router.push(`?${qp.toString()}`);
+      });
     }, 500);
     return () => window.clearTimeout(handle);
-  }, [search, params, router]);
+  }, [search, params, router, startTransition]);
+
+  React.useEffect(() => {
+    if (!search || students.length === 0) return;
+    const row = document.querySelector('table tbody tr') as HTMLElement | null;
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [students, search]);
 
   const formatDate = (value: string | null) => {
     if (!value) return 'غير معرف';
@@ -262,7 +272,7 @@ export function StudentTable({
                 <Input
                   select
                   value={status ?? ''}
-                  onChange={(e: any) => setStatus(e.target.value || undefined)}
+                  onChange={(e) => setStatus((e.target as HTMLInputElement).value || undefined)}
                 >
                   <MenuItem value="">الكل</MenuItem>
                   <MenuItem value="active">نشط</MenuItem>
@@ -318,7 +328,7 @@ export function StudentTable({
           {isPending && (
             <Stack direction="row" justifyContent="center" alignItems="center" sx={{ color: 'var(--brand-teal)' }} spacing={1}>
               <CircularProgress size={18} thickness={5} />
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>جار تحميل الطلاب</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{search ? 'جار البحث عن الطالب' : 'جار تحميل الطلاب'}</Typography>
             </Stack>
           )}
 
