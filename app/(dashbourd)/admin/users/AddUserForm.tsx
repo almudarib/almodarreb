@@ -74,9 +74,9 @@ export default function AddUserForm({
                 MenuProps={{ PaperProps: { sx: { direction: 'rtl' } } }}
                 displayEmpty
               >
-                <MenuItem value="teacher">معلّم </MenuItem>
                 <MenuItem value="admin">مسؤول </MenuItem>
                 <MenuItem value="sub_admin">أدمن فرعي </MenuItem>
+                <MenuItem value="teacher">مدرسة</MenuItem>
               </Select>
             </FormControl>
             <Box>
