@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import type { StudentRecord } from '@/app/actions/students';
-import { getStudentProgress, getStudentLoginHistory, updateStudent } from '@/app/actions/students';
+import { getStudentProgress, getStudentLoginHistory, updateStudent, getStudentExamStatsByLanguage } from '@/app/actions/students';
 import StudentProgress from '@/components/student/StudentProgress';
 import type { StudentProgressData } from '@/app/actions/students';
 import type { StudentLoginEvent } from '@/app/actions/students';
@@ -33,6 +33,7 @@ export function StudentDetailsModal({
   const [lastLoginAt, setLastLoginAt] = React.useState<string | null>(null);
   const [showExams, setShowExams] = React.useState<boolean>(!!student?.show_exams);
   const [autoHideApplied, setAutoHideApplied] = React.useState(false);
+  const [examStats, setExamStats] = React.useState<{ taken: number; total: number; language: string } | null>(null);
 
   React.useEffect(() => {
     setShowExams(!!student?.show_exams);
@@ -90,6 +91,22 @@ export function StudentDetailsModal({
     };
   }, [open, student]);
 
+
+  React.useEffect(() => {
+    let active = true;
+    async function loadExamStats() {
+      if (!student || !open) return;
+      const r = await getStudentExamStatsByLanguage(student.id);
+      if (!active) return;
+      if (r.ok) setExamStats({ taken: r.stats.taken, total: r.stats.total, language: r.stats.language });
+      else setExamStats(null);
+    }
+    loadExamStats();
+    return () => {
+      active = false;
+    };
+  }, [open, student]);
+
   React.useEffect(() => {
     async function maybeAutoHideExams() {
       if (!open || !student || autoHideApplied) return;
@@ -137,6 +154,14 @@ export function StudentDetailsModal({
     const yyyy = String(d.getFullYear());
     return `${dd}-${mm}-${yyyy}`;
   }
+  function languageName(code: string | undefined | null): string {
+    if (!code) return '--';
+    const c = String(code).toLowerCase();
+    if (c === 'ar') return 'العربية';
+    if (c === 'tr') return 'التركية';
+    if (c === 'en') return 'الإنجليزية';
+    return c;
+  }
 
   return (
     <Modal
@@ -174,10 +199,7 @@ export function StudentDetailsModal({
                   <TableCell>تاريخ الامتحان</TableCell>
                   <TableCell>{formatDate(student.exam_datetime)}</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell>تاريخ البدء</TableCell>
-                  <TableCell>{formatDateOnly(student.start_date)}</TableCell>
-                </TableRow>
+
                 <TableRow>
                   <TableCell>تاريخ التسجيل</TableCell>
                   <TableCell>{formatDateOnly(student.registration_date)}</TableCell>
@@ -190,14 +212,12 @@ export function StudentDetailsModal({
                   <TableCell>الأستاذ المشرف</TableCell>
                   <TableCell>{teacherName ?? '--'}</TableCell>
                 </TableRow>
-                <TableRow>
-                  <TableCell>الحالة</TableCell>
-                  <TableCell>{student.status}</TableCell>
-                </TableRow>
+
                 <TableRow>
                   <TableCell>إظهار الاختبارات</TableCell>
                   <TableCell>{showExams ? 'نعم' : 'لا'}</TableCell>
                 </TableRow>
+
                 <TableRow>
                   <TableCell>ملاحظة</TableCell>
                   <TableCell>{student.notes ?? '--'}</TableCell>

@@ -1162,43 +1162,73 @@ export async function getStudentProgress(
     const totalActiveSessions = (activeSessions ?? []).length;
     const allVideosWatched = totalActiveSessions > 0 && watchedSessionIds.length >= totalActiveSessions;
 
-    const { data: resultsAll, error: resErrAll } = await supabase
-      .from('exam_results')
-      .select('exam_id,score,taken_at')
-      .eq('student_id', studentId)
-      .order('taken_at', { ascending: false });
-    if (resErrAll) {
-      return { ok: false, error: resErrAll.message, details: resErrAll };
+    const { data: sInfo, error: sErr } = await supabase
+      .from('students')
+      .select('language')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (sErr) {
+      return { ok: false, error: sErr.message, details: sErr };
     }
-    const distinctExams = Array.from(
-      new Set(
-        (resultsAll ?? [])
-          .map((r) => (r as unknown as { exam_id?: number }).exam_id)
-          .filter((id): id is number => typeof id === 'number'),
-      ),
-    );
-    const lastScore = resultsAll && resultsAll.length > 0 ? (resultsAll[0] as any).score as number : null;
+    const language =
+      (((sInfo as unknown) as Record<string, unknown>)?.language as string | undefined) ?? 'ar';
+
     const { data: activeExams, error: actExErr } = await supabase
       .from('exams')
       .select('id')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('language', language);
     if (actExErr) {
       return { ok: false, error: actExErr.message, details: actExErr };
     }
-    const totalActiveExams = (activeExams ?? []).length;
-    const allExamsCompleted = totalActiveExams > 0 && distinctExams.length >= totalActiveExams;
+    const examIds = Array.from(
+      new Set(
+        (activeExams ?? [])
+          .map((r) => (r as unknown as { id?: number }).id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
+    const totalActiveExams = examIds.length;
+
+    let lastScore: number | null = null;
+    let examsTakenCount = 0;
+    if (totalActiveExams > 0) {
+      const { data: resRows, error: resErr } = await supabase
+        .from('exam_results')
+        .select('exam_id,score,taken_at')
+        .eq('student_id', studentId)
+        .in('exam_id', examIds)
+        .order('taken_at', { ascending: false });
+      if (resErr) {
+        return { ok: false, error: resErr.message, details: resErr };
+      }
+      const distinctExamIds = Array.from(
+        new Set(
+          (resRows ?? [])
+            .map((r) => (r as unknown as { exam_id?: number }).exam_id)
+            .filter((id): id is number => typeof id === 'number'),
+        ),
+      );
+      examsTakenCount = distinctExamIds.length;
+      if (resRows && resRows.length > 0) {
+        const first = (resRows[0] as unknown) as { score?: unknown };
+        const n = Number(first.score);
+        lastScore = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : null;
+      }
+    }
+    const allExamsCompleted = totalActiveExams > 0 && examsTakenCount >= totalActiveExams;
 
     return {
       ok: true,
       progress: {
         totalStudyMinutes,
-        examsTaken: distinctExams.length,
+        examsTaken: examsTakenCount,
         lastScore,
         expectedScore: lastScore,
         allExamsCompleted,
         allVideosWatched,
-        totalActiveExams: totalActiveExams,
-        totalActiveSessions: totalActiveSessions,
+        totalActiveExams,
+        totalActiveSessions,
         sessionsWatched: watchedSessionIds.length,
       },
     };
@@ -1264,6 +1294,92 @@ export async function getStudentLoginHistory(
       };
     });
     return { ok: true, events };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'حدث خطأ غير معروف',
+      details: error,
+    };
+  }
+}
+export type StudentExamStatsByLanguage = {
+  language: string;
+  taken: number;
+  total: number;
+};
+export async function getStudentExamStatsByLanguage(
+  studentId: number,
+): Promise<{ ok: true; stats: StudentExamStatsByLanguage } | { ok: false; error: string; details?: unknown }> {
+  try {
+    const supa = await createServerClient();
+    const { data: u } = await supa.auth.getUser();
+    const uid = u.user?.id ?? null;
+    const { data: usr } = await supa.from('users').select('id').eq('auth_user_id', uid as string).maybeSingle();
+    const userId = (usr?.id as number | undefined) ?? undefined;
+    const { data: rolesRows } = await supa
+      .from('user_roles')
+      .select('role_id, roles(name)')
+      .eq('user_id', userId as number);
+    const roleNames = (rolesRows ?? [])
+      .map((r) => (r as { roles?: { name?: string } })?.roles?.name)
+      .filter(Boolean);
+    const isTeacher = roleNames.includes('teacher');
+    const supabase = createAdminClient();
+    if (isTeacher) {
+      const { data: srow } = await supabase
+        .from('students')
+        .select('id,teacher_id')
+        .eq('id', studentId)
+        .maybeSingle();
+      if (!srow || (srow as any).teacher_id !== userId) {
+        return { ok: false, error: 'غير مصرح | Unauthorized' };
+      }
+    }
+    const { data: sInfo, error: sErr } = await supabase
+      .from('students')
+      .select('language')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (sErr) {
+      return { ok: false, error: sErr.message, details: sErr };
+    }
+    const lang = ((sInfo as unknown) as Record<string, unknown>)?.language as string | undefined;
+    const language = lang ?? 'ar';
+    const { data: examsRows, error: exErr } = await supabase
+      .from('exams')
+      .select('id')
+      .eq('is_active', true)
+      .eq('language', language);
+    if (exErr) {
+      return { ok: false, error: exErr.message, details: exErr };
+    }
+    const examIds = Array.from(
+      new Set(
+        (examsRows ?? [])
+          .map((r) => (r as unknown as { id?: number }).id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    );
+    const total = examIds.length;
+    if (total === 0) {
+      return { ok: true, stats: { language, taken: 0, total: 0 } };
+    }
+    const { data: resRows, error: resErr } = await supabase
+      .from('exam_results')
+      .select('exam_id')
+      .eq('student_id', studentId)
+      .in('exam_id', examIds);
+    if (resErr) {
+      return { ok: false, error: resErr.message, details: resErr };
+    }
+    const taken = Array.from(
+      new Set(
+        (resRows ?? [])
+          .map((r) => (r as unknown as { exam_id?: number }).exam_id)
+          .filter((id): id is number => typeof id === 'number'),
+      ),
+    ).length;
+    return { ok: true, stats: { language, taken, total } };
   } catch (error) {
     return {
       ok: false,

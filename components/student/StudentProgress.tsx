@@ -37,7 +37,6 @@ export function StudentProgress({ data }: StudentProgressProps) {
         />
         <Stack direction="row" spacing={2} justifyContent="space-between">
           <Typography variant="body2">النتيجة الأخيرة: {data?.lastScore ?? '--'}</Typography>
-          <Typography variant="body2">الدراسة: {data?.totalStudyMinutes ?? 0} دقيقة</Typography>
           <Typography variant="body2">الاختبارات: {(data?.examsTaken ?? 0)} / {(data?.totalActiveExams ?? 0)}</Typography>
           <Typography variant="body2">الفيديوهات: {(data?.sessionsWatched ?? 0)} / {(data?.totalActiveSessions ?? 0)}</Typography>
         </Stack>
