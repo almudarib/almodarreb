@@ -118,6 +118,7 @@ async function StudentsContent({
               initialSearch={q.search}
               defaultTeacherId={currentTeacherId}
               lockTeacherAdd
+              simpleDeleteUI
             />
           </Box>
         </CardContent>

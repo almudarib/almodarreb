@@ -37,6 +37,7 @@ export interface StudentTableProps {
   initialSearch?: string;
   defaultTeacherId?: number;
   lockTeacherAdd?: boolean;
+  simpleDeleteUI?: boolean;
 }
 
 // --- مساعدات التنسيق البصري ---
@@ -59,6 +60,7 @@ export function StudentTable({
   initialSearch,
   defaultTeacherId,
   lockTeacherAdd,
+  simpleDeleteUI,
 }: StudentTableProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -168,6 +170,7 @@ export function StudentTable({
           render: (row) => (
             <StudentActions
               student={row}
+              simpleDeleteUI={!!simpleDeleteUI}
               onOpenDetails={(s) => {
                 setSelected(s as StudentWithTeacher);
                 setDetailsOpen(true);
@@ -248,6 +251,7 @@ export function StudentTable({
           render: (row) => (
             <StudentActions
               student={row}
+              simpleDeleteUI={!!simpleDeleteUI}
               onOpenDetails={(s) => {
                 setSelected(s as StudentWithTeacher);
                 setDetailsOpen(true);

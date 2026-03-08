@@ -22,6 +22,7 @@ export function StudentEditModal({ open, onClose, student }: StudentEditModalPro
   const [teachers, setTeachers] = React.useState<Array<{ id: number; name: string }>>([]);
   const [form, setForm] = React.useState({
     name: '',
+    national_id: '',
     exam_datetime: '',
     show_exams: true,
     language: 'ar',
@@ -34,6 +35,7 @@ export function StudentEditModal({ open, onClose, student }: StudentEditModalPro
     if (!student) return;
     setForm({
       name: student.name,
+      national_id: student.national_id,
       exam_datetime: student.exam_datetime ? String(student.exam_datetime).slice(0, 16) : '',
       show_exams: student.show_exams,
       language: student.language ?? 'ar',
@@ -66,6 +68,13 @@ export function StudentEditModal({ open, onClose, student }: StudentEditModalPro
   async function handleSubmit() {
     if (!student) return;
     setSaving(true);
+    const ni = String(form.national_id ?? '').trim();
+    const niValid = /^\d{10,20}$/.test(ni);
+    if (!niValid) {
+      setSaving(false);
+      if (typeof window !== 'undefined') alert('رقم الهوية يجب أن يكون من 10 إلى 20 رقمًا');
+      return;
+    }
     const payload: Record<string, unknown> = {
       id: student.id,
       name: form.name,
@@ -76,6 +85,7 @@ export function StudentEditModal({ open, onClose, student }: StudentEditModalPro
       notes: form.notes || null,
       language: form.language,
     };
+    payload.national_id = ni;
     const r = await updateStudent(payload as any);
     setSaving(false);
     if (r.ok) {
@@ -108,6 +118,26 @@ export function StudentEditModal({ open, onClose, student }: StudentEditModalPro
                   value={form.name}
                   onChange={(e) => setField('name', e.target.value)}
                   aria-label="اسم الطالب"
+                />
+              </Box>
+              <Box>
+                <Label>رقم الهوية</Label>
+                <Input
+                  value={form.national_id}
+                  onChange={(e) =>
+                    setField(
+                      'national_id',
+                      e.target.value.replace(/\D/g, '').slice(0, 20),
+                    )
+                  }
+                  inputProps={{ inputMode: 'numeric', pattern: '\\d*', maxLength: 20 }}
+                  error={!!form.national_id && !/^\d{10,20}$/.test(form.national_id)}
+                  helperText={
+                    !!form.national_id && !/^\d{10,20}$/.test(form.national_id)
+                      ? 'الرقم يجب أن يكون من 10 إلى 20 رقمًا'
+                      : undefined
+                  }
+                  aria-label="رقم الهوية"
                 />
               </Box>
               <Box>

@@ -22,9 +22,10 @@ export type StudentActionsProps = {
   student: StudentRecord;
   onOpenDetails: (student: StudentRecord) => void;
   onOpenEdit: (student: StudentRecord) => void;
+  simpleDeleteUI?: boolean;
 };
 
-export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentActionsProps) {
+export function StudentActions({ student, onOpenDetails, onOpenEdit, simpleDeleteUI = false }: StudentActionsProps) {
   const router = useRouter();
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -57,6 +58,15 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
   }
   async function handleDeleteStudent() {
     handleClose();
+    if (simpleDeleteUI) {
+      const ok = typeof window !== 'undefined' ? window.confirm('تأكيد حذف الطالب؟ سيتم اعتباره ناجحًا وإيقاف الاختبارات له.') : true;
+      if (ok) {
+        const r = await deleteStudent(student.id);
+        if (r.ok) router.refresh();
+        else alert(formatErrorMessage(r.error));
+      }
+      return;
+    }
     setConfirmAction('delete');
   }
   function handleEdit() {
@@ -141,7 +151,7 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? 'تأكيد حذف الأجهزة'
             : confirmAction === 'delete'
-            ? 'تأكيد تعطيل الطالب'
+            ? 'تأكيد حذف الطالب'
             : confirmAction === 'pass'
             ? 'تأكيد جعل الطالب ناجح'
             : confirmAction === 'fail'
@@ -153,7 +163,7 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? 'سيتم حذف جميع الأجهزة المرتبطة بهذا الطالب نهائيًا.'
             : confirmAction === 'delete'
-            ? 'سيتم تعطيل هذا الطالب وإيقاف الاختبارات له، وستبقى سجلات المحاسبة كما هي.'
+            ? 'إذا كنت معلّمًا: سيُعتبر الطالب ناجحًا وسيتم إيقاف الاختبارات له. إذا كنت مديرًا: سيتم حذف الطالب نهائيًا.'
             : confirmAction === 'pass'
             ? 'سيتم تعيين الحالة كـ ناجح دون حذف السجلات.'
             : confirmAction === 'fail'
@@ -164,7 +174,7 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? ['حذف جميع الأجهزة المسجلة للطالب']
             : confirmAction === 'delete'
-            ? ['إيقاف عرض الاختبارات والحساب', 'الإبقاء على سجلات المحاسبة', 'يمكن إظهاره لاحقًا']
+            ? ['للمعلّم: تعيين الحالة ناجح وإيقاف الاختبارات', 'للإدارة: حذف نهائي لكل بيانات الطالب']
             : confirmAction === 'pass'
             ? ['تعيين الحالة: ناجح']
             : confirmAction === 'fail'
@@ -175,7 +185,7 @@ export function StudentActions({ student, onOpenDetails, onOpenEdit }: StudentAc
           confirmAction === 'devices'
             ? 'تأكيد حذف الأجهزة'
             : confirmAction === 'delete'
-            ? 'تأكيد التعطيل'
+            ? 'تأكيد الحذف'
             : confirmAction === 'pass'
             ? 'تأكيد النجاح'
             : confirmAction === 'fail'
