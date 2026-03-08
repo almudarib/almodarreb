@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/Modal';
 import { updateUser } from '@/app/actions/users';
 import type { UserKind, UserSummary } from '@/app/actions/users';
+import { initializeDefaultFeeForTeacher, getTeacherAccountingDetails } from '@/app/actions/accounting';
 
 export default function EditUserModal({
   open,
@@ -30,6 +31,7 @@ export default function EditUserModal({
     password: string;
     kind: UserKind;
   }>({ name: '', email: '', password: '', kind: 'teacher' });
+  const [defaultFee, setDefaultFee] = React.useState<string>('');
 
   React.useEffect(() => {
     if (user) {
@@ -39,6 +41,18 @@ export default function EditUserModal({
         password: '',
         kind: user.kind,
       });
+      if (user.kind === 'teacher') {
+        getTeacherAccountingDetails(user.id).then((r) => {
+          if (r.ok) {
+            const fee = r.details.per_student_fee;
+            setDefaultFee(fee !== null && fee !== undefined ? String(fee) : '');
+          } else {
+            setDefaultFee('');
+          }
+        });
+      } else {
+        setDefaultFee('');
+      }
     }
   }, [user]);
 
@@ -53,14 +67,26 @@ export default function EditUserModal({
       email: form.email,
       password: form.password || undefined,
     });
-    setSubmitting(false);
-    if (res.ok) {
-      onClose();
-      setMessage('تم حفظ التعديلات بنجاح');
-      onSaved();
-    } else {
+    if (!res.ok) {
+      setSubmitting(false);
       setError(res.error ?? 'فشلت عملية التعديل');
+      return;
     }
+    if (form.kind === 'teacher' && defaultFee.trim() !== '') {
+      const fee = Number(defaultFee);
+      if (Number.isFinite(fee) && fee >= 0) {
+        const initRes = await initializeDefaultFeeForTeacher(user.id, fee, { overwriteExisting: true });
+        if (!initRes.ok) {
+          setSubmitting(false);
+          setError(initRes.error);
+          return;
+        }
+      }
+    }
+    setSubmitting(false);
+    onClose();
+    setMessage('تم حفظ التعديلات بنجاح');
+    onSaved();
   }
 
   return (
@@ -97,6 +123,18 @@ export default function EditUserModal({
             placeholder="اتركها فارغة إن لم ترغب بالتغيير"
             inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
           />
+          {form.kind === 'teacher' && (
+            <>
+              <Label>القيمة الافتراضية لكل طالب (اختياري)</Label>
+              <Input
+                type="number"
+                value={defaultFee}
+                onChange={(e) => setDefaultFee((e.target as HTMLInputElement).value)}
+                placeholder="اتركها فارغة إن لم ترغب بالتغيير"
+                inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+              />
+            </>
+          )}
           <Label>نوع المستخدم</Label>
           <Select
             value={form.kind}
