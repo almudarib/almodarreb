@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { Alert, Box, FormControl, MenuItem, Select, Stack, Typography } from '@mui/material';
+import { Alert, Box, FormControl, MenuItem, Select, Stack, Typography, InputAdornment, IconButton } from '@mui/material';
 import { CircularProgress } from '@mui/material';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form } from '@/components/ui/Form';
-import { PeopleAltRounded } from '@mui/icons-material';
+import { PeopleAltRounded, Visibility, VisibilityOff } from '@mui/icons-material';
 import { createUser, type CreateUserInput } from '@/app/actions/users';
 import type { UserKind } from '@/app/actions/users';
 
@@ -29,6 +29,8 @@ export default function AddUserForm({
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [fieldErrors] = React.useState<Record<string, string>>({});
+
+  const [showPassword, setShowPassword] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -105,12 +107,26 @@ export default function AddUserForm({
             <Box>
               <Label sx={{ mb: 1, fontWeight: 600 }}>كلمة المرور</Label>
               <Input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="******"
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[var(--brand-teal)] transition-all outline-none"
                 inputProps={{ dir: 'rtl', style: { textAlign: 'right' } }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="إظهار/إخفاء كلمة المرور"
+                        onClick={() => setShowPassword((v) => !v)}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <Visibility /> : <VisibilityOff />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
               />
             </Box>
             {kind === 'teacher' && (
