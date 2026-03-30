@@ -55,7 +55,7 @@ export function LoginForm({
       <Card className="border-none shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden bg-white/80 backdrop-blur-sm">
         {/* شريط علوي جمالي بلون الهوية */}
         <div className="h-2 bg-gradient-to-r from-[var(--brand-teal)] to-[var(--brand-gold)]" />
-        
+
         <CardHeader className="space-y-1 text-center pt-8">
           <div className="mx-auto mb-3 flex items-center justify-center">
             <Image src={logo} alt="Logo" width={64} height={64} className="rounded-lg" />
@@ -115,9 +115,9 @@ export function LoginForm({
               )}
 
               {/* زر تسجيل الدخول */}
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-lg font-bold bg-[var(--brand-dark)] hover:bg-black transition-all shadow-lg hover:shadow-[var(--brand-teal-13)] disabled:opacity-70" 
+              <Button
+                type="submit"
+                className="w-full h-12 text-lg font-bold bg-[var(--brand-dark)] hover:bg-black transition-all shadow-lg hover:shadow-[var(--brand-teal-13)] disabled:opacity-70"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -130,25 +130,58 @@ export function LoginForm({
                 )}
               </Button>
               <div className="flex items-center justify-center gap-4 mt-4 text-neutral-600">
-                <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook" className="hover:text-[var(--brand-teal)]">
+
+                {/* Facebook */}
+                <a
+                  href="https://www.facebook.com/share/1Dw7Pi43m5/"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Facebook"
+                  className="hover:text-[var(--brand-teal)]"
+                >
                   <Facebook />
                 </a>
-                <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram" className="hover:text-[var(--brand-teal)]">
+
+                {/* Instagram */}
+                <a
+                  href="https://www.instagram.com/almodarreb?igsh=MWVpOTkyMWM4a3ptaQ=="
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Instagram"
+                  className="hover:text-[var(--brand-teal)]"
+                >
                   <Instagram />
                 </a>
-                <a href="https://wa.me" target="_blank" rel="noreferrer" aria-label="WhatsApp" className="hover:text-[var(--brand-teal)]">
+
+                {/* WhatsApp */}
+                <a
+                  href="https://wa.me/963983352558"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="WhatsApp"
+                  className="hover:text-[var(--brand-teal)]"
+                >
                   <WhatsApp />
                 </a>
-                <a href="https://tiktok.com" target="_blank" rel="noreferrer" aria-label="TikTok" className="hover:text-[var(--brand-teal)]">
+
+                {/* TikTok */}
+                <a
+                  href="https://www.tiktok.com/@almudarib.700?_r=1&_t=ZS-94YJzEyeWjl"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="TikTok"
+                  className="hover:text-[var(--brand-teal)]"
+                >
                   <Audiotrack />
                 </a>
+
               </div>
               <p className="text-center mt-2 text-sm text-neutral-700">تطبيق المدرب باشراف وادارة ابو تيم</p>
             </div>
           </form>
         </CardContent>
       </Card>
-      
+
     </div>
   );
 }
