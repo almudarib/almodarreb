@@ -76,17 +76,6 @@ export async function listTeacherAccountingStats(options?: {
       ) as number[];
     }
 
-    try {
-      const { data: studentsTid } = await supabase.from('students').select('teacher_id');
-      const { data: accTid } = await supabase.from('accounting').select('teacher_id');
-      const { data: settingsTid } = await supabase.from('teacher_accounting_settings').select('teacher_id');
-      const extraIds = [
-        ...((studentsTid ?? []).map((r) => r.teacher_id as number | undefined).filter((v): v is number => typeof v === 'number')),
-        ...((accTid ?? []).map((r) => r.teacher_id as number | undefined).filter((v): v is number => typeof v === 'number')),
-        ...((settingsTid ?? []).map((r) => r.teacher_id as number | undefined).filter((v): v is number => typeof v === 'number')),
-      ];
-      teacherIds = Array.from(new Set([...(teacherIds ?? []), ...extraIds]));
-    } catch {}
     if (teacherIds.length === 0) {
       return { ok: true, stats: [] };
     }
@@ -101,10 +90,15 @@ export async function listTeacherAccountingStats(options?: {
     const teacherNameById = new Map<number, string>(
       (usersRows ?? []).map((u) => [u.id as number, (u.name as string) ?? '']),
     );
+    // Only active teachers present in users (skip orphaned role/accounting references)
+    const activeTeacherIds = teacherIds.filter((id) => teacherNameById.has(id));
+    if (activeTeacherIds.length === 0) {
+      return { ok: true, stats: [] };
+    }
 
     const stats: TeacherAccountingStats[] = [];
 
-    for (const tid of teacherIds) {
+    for (const tid of activeTeacherIds) {
       const { data: studentsRows, error: studentsErr } = await supabase
         .from('students')
         .select('id')
